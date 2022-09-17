@@ -50,4 +50,4 @@ ffigen:
   output: 'lib/ffi/generated_bindings.dart'
   headers:
     entry-points:
-      - 'ci/main.h'
+      - 'ci/lib.h'

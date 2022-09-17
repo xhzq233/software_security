@@ -12,6 +12,6 @@ typedef struct send_data_t {
 
 typedef void send_fn_t(ffi_send_data);
 
-void init(send_fn_t*);
+void ci_init(send_fn_t*);
 
 #endif //SOFTWARE_SECURITY_MAIN_H

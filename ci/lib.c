@@ -2,10 +2,16 @@
 // Created by Xu on 9/16/22.
 //
 
-#include "main.h"
-#include <unistd.h>
+#include "lib.h"
 
-void init(send_fn_t *fn) {
+#ifdef __APPLE__
+#include <unistd.h>
+#elif defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#define sleep(x) Sleep((x)*1000)
+#endif
+
+void ci_init(send_fn_t *fn) {
     const char *a[] = {
             "雪豹闭嘴",
             "何为猫雷",

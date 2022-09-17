@@ -77,7 +77,8 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = Image.network('https://img.moegirl.org.cn/common/1/12/Nyaru_hello.png');
+    final bg =
+        Image.network('https://img.moegirl.org.cn/common/1/12/Nyaru_hello.png');
 
     return Material(
       child: Stack(
@@ -112,7 +113,7 @@ class HomePage extends StatelessWidget {
                           pinned: true,
                           delegate: PinPinHomeSliverHeaderDelegate(),
                         ),
-                        Text(Constant.meme).sliverBox
+                        const Text(Constant.meme).sliverBox
                       ],
                     )),
                     Expanded(
@@ -120,7 +121,7 @@ class HomePage extends StatelessWidget {
                               itemCount: ffi_channel_str_list.length,
                               itemBuilder: (BuildContext context, int index) {
                                 return Padding(
-                                  padding: EdgeInsets.all(5),
+                                  padding: const EdgeInsets.all(5),
                                   child: Text(ffi_channel_str_list[index]),
                                 );
                               },
@@ -148,7 +149,8 @@ class PinPinHomeSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     const title = Text('文件路径: C://Users/XHZ/wcnm.exe');
 
     return LayoutBuilder(

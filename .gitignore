@@ -45,3 +45,7 @@ app.*.map.json
 
 **/cmake-build-debug
 pubspec.lock
+
+**/.vscode
+**/generated*
+**/Generated*

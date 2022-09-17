@@ -17,7 +17,7 @@ xhzq233 _create() {
     libraryPath = path.join(Directory.current.path, 'ci', 'libci.dylib');
   }
   if (Platform.isWindows) {
-    libraryPath = path.join(Directory.current.path, 'ci', 'libci.dll');
+    libraryPath = path.join(Directory.current.path, 'ci.dll');
   }
   final dylib = ffi.DynamicLibrary.open(libraryPath);
 
