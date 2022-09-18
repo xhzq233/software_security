@@ -1,36 +1,41 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:ffi' as ffi;
-import 'dart:io' show Platform, Directory;
 import 'package:get/get.dart';
-import 'package:path/path.dart' as path;
+import 'package:software_security/ffi/u8_ptr_to_str.dart';
 import 'generated_bindings.dart';
 import 'dart:isolate';
 
 final _receivePort = ReceivePort();
 
-RxString ffi_channel_str = RxString('');
-RxList<String> ffi_channel_str_list = RxList();
+final RxString ffi_channel_str = RxString('');
 
-xhzq233 _create() {
-  var libraryPath = path.join(Directory.current.path, 'ci', 'libci.so');
-  if (Platform.isMacOS) {
-    libraryPath = path.join(Directory.current.path, 'ci', 'libci.dylib');
-  }
-  if (Platform.isWindows) {
-    libraryPath = path.join(Directory.current.path, 'ci.dll');
-  }
-  final dylib = ffi.DynamicLibrary.open(libraryPath);
+final List<String> ffi_channel_str_list = [];
+final StreamController<bool> _streamController = StreamController();
+final Stream<bool> ffi_channel_str_list_notification = _streamController.stream;
 
-  return xhzq233(dylib);
+const LIST_INCREASE = true;
+const LIST_DECREASE = false;
+
+ffilib _create() {
+  final String libraryPath;
+  if (GetPlatform.isMacOS) {
+    libraryPath = 'libci.dylib';
+  } else if (GetPlatform.isWindows) {
+    libraryPath = 'ci.dll';
+  } else {
+    libraryPath = 'libci.so';
+  }
+  return ffilib(ffi.DynamicLibrary.open(libraryPath));
 }
 
-final xhzq233 _lib = _create();
+final ffilib _lib = _create();
 
 void initFFIChannel() {
   Isolate.spawn(_newIsolate, _receivePort.sendPort);
   _receivePort.listen((message) {
     final data = message as _internal_send_data_t;
     if (data.type == 1) {
+      _streamController.sink.add(LIST_INCREASE);
       ffi_channel_str_list.add(data.str);
     } else {
       ffi_channel_str.value = data.str;
@@ -43,7 +48,7 @@ SendPort? _sendPort;
 void _newIsolate(SendPort sendPort) {
   _sendPort = sendPort;
   ffi.Pointer<send_fn_t> fn = ffi.Pointer.fromFunction(_callback);
-  _lib.init(fn);
+  _lib.ci_init(fn);
 }
 
 class _internal_send_data_t {
@@ -57,15 +62,5 @@ class _internal_send_data_t {
 void _callback(ffi_send_data data) {
   final ffi.Pointer<ffi.Uint8> codeUnits = data.ref.str.cast();
 
-  int length(ffi.Pointer<ffi.Uint8> codeUnits) {
-    var length = 0;
-    while (codeUnits[length] != 0) {
-      length++;
-    }
-    return length;
-  }
-
-  final str = utf8.decode(codeUnits.asTypedList(length(codeUnits)));
-
-  _sendPort?.send(_internal_send_data_t(data.ref.type, str));
+  _sendPort?.send(_internal_send_data_t(data.ref.type, codeUnits.string));
 }
