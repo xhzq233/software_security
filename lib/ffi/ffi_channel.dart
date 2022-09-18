@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:ffi' as ffi;
+import 'package:ffi/ffi.dart';
 import 'package:get/get.dart';
 import 'package:software_security/ffi/u8_ptr_to_str.dart';
+import 'package:software_security/file_select.dart';
 import 'generated_bindings.dart';
 import 'dart:isolate';
 
@@ -48,7 +50,12 @@ SendPort? _sendPort;
 void _newIsolate(SendPort sendPort) {
   _sendPort = sendPort;
   ffi.Pointer<send_fn_t> fn = ffi.Pointer.fromFunction(_callback);
-  _lib.ci_init(fn);
+  final data = calloc.allocate<struct_attach_>(ffi.sizeOf<struct_attach_>());
+  data.ref.executable_path = filePath.value.toNativeUtf8().cast();
+  data.ref.time = DateTime.now().millisecondsSinceEpoch;
+  data.ref.send_fn = fn;
+  _lib.ci_init(data);
+  calloc.free(data);
 }
 
 class _internal_send_data_t {
@@ -59,7 +66,7 @@ class _internal_send_data_t {
   final String str;
 }
 
-void _callback(ffi_send_data data) {
+void _callback(send_data_t data) {
   final ffi.Pointer<ffi.Uint8> codeUnits = data.ref.str.cast();
 
   _sendPort?.send(_internal_send_data_t(data.ref.type, codeUnits.string));

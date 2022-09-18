@@ -5,14 +5,7 @@
 #ifndef SOFTWARE_SECURITY_MAIN_H
 #define SOFTWARE_SECURITY_MAIN_H
 
-#ifdef __APPLE__
-
-#include <unistd.h>
-
-#elif defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#define sleep(x) Sleep((x)*1000)
-#endif
+typedef long long time_t;
 
 typedef struct struct_send_ {
     const char type;

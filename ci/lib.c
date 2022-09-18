@@ -3,6 +3,14 @@
 //
 
 #include "lib.h"
+#ifdef __APPLE__
+
+#include <unistd.h>
+
+#elif defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#define sleep(x) Sleep((x)*1000)
+#endif
 
 int exit_flag = 1;
 
