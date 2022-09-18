@@ -38,13 +38,10 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
 
-project(ci VERSION 0.1.0)
-
-add_library(ci SHARED "../../ci/lib.c" "../../ci/lib.def")
-
+project(ci)
+add_library(ci SHARED "../../ci/lib.cpp" "../../ci/lib.def")
+target_link_libraries(ci PRIVATE "E:/XHZ/Documents/Dev/Detours/lib.X64/detours.lib")
 set_target_properties(ci PROPERTIES
     PUBLIC_HEADER "../../ci/lib.h"
-    VERSION ${PROJECT_VERSION}
-    SOVERSION 1
     OUTPUT_NAME "ci"
 )
