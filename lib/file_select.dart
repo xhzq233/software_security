@@ -7,13 +7,14 @@ RxString filePath = RxString('');
 void selectFile() async {
   final XTypeGroup typeGroup = XTypeGroup(
     label: 'executables',
-    extensions: null,
+    extensions: ['exe', 'png', 'dmg'],
   );
 
-  final XFile? file =
-      await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+  final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
   if (null != file) {
     filePath.value = file.path;
-    initFFIChannel(file.path);
+    stopLib();
+    initLib(file.path);
   }
 }
+

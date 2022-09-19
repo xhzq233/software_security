@@ -45,6 +45,10 @@ flutter:
   uses-material-design: true
   assets:
     - images/
+  fonts:
+    - family: JBMono
+      fonts:
+        - asset: fonts/JetBrainsMono-Regular.ttf
 
 ffigen:
   name: ffilib

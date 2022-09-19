@@ -63,4 +63,22 @@ class Constant {
       onBackground: on,
       surface: Colors.black,
       onSurface: on);
+
+  static const TextTheme textTheme = TextTheme(
+    displayLarge: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    displayMedium: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    displaySmall: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    headlineLarge: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    headlineMedium: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    headlineSmall: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    titleLarge: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    titleMedium: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    titleSmall: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    bodyLarge: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    bodyMedium: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    bodySmall: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    labelLarge: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    labelMedium: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+    labelSmall: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
+  );
 }

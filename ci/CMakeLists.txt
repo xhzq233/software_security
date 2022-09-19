@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 include_directories(.)
 
-add_library(ci SHARED lib.c lib.def)
+add_library(ci SHARED lib.cpp lib.def)
 
 set_target_properties(ci PROPERTIES
     PUBLIC_HEADER lib.h

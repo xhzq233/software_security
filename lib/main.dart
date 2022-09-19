@@ -23,9 +23,7 @@ class SoftwareSecurity extends StatelessWidget {
     return GetMaterialApp(
       title: '猫雷とは何ですか？',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        colorScheme: Constant.darkScheme,
-      ),
+      theme: ThemeData.dark().copyWith(colorScheme: Constant.darkScheme, textTheme: Constant.textTheme),
       home: const HomePage(),
     );
   }
@@ -45,16 +43,14 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     ffi_channel_str_list_notification.listen((l) {
       if (l == LIST_INCREASE) {
-        globalKey.currentState!
-            .insertItem(0, duration: const Duration(milliseconds: 800));
+        globalKey.currentState!.insertItem(0, duration: const Duration(milliseconds: 800));
       } else {}
     });
     super.initState();
   }
 
   void _rmItem(int index) {
-    globalKey.currentState!.removeItem(
-        index, (context, animation) => const ColoredBox(color: Colors.red));
+    globalKey.currentState!.removeItem(index, (context, animation) => const ColoredBox(color: Colors.red));
     ffi_channel_str_list.removeAt(index);
   }
 
@@ -64,8 +60,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget _itemBuilder(
-      BuildContext context, int i, Animation<double> animation) {
+  void _stop() {
+    filePath.value = '';
+    stopLib();
+  }
+
+  Widget _itemBuilder(BuildContext context, int i, Animation<double> animation) {
     final b = CurvedAnimation(parent: animation, curve: Curves.bounceOut);
     final a = CurvedAnimation(parent: b, curve: Curves.easeInOutSine);
     final index = ffi_channel_str_list.length - 1 - i;
@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
         );
       },
       child: MonitorRow(
-        key: Key(info),
+        key: UniqueKey(),
         info: info,
         onDismissed: (DismissDirection direction) {
           _rmItem(index);
@@ -122,19 +122,14 @@ class _HomePageState extends State<HomePage> {
                             pinned: true,
                             delegate: SliverHeaderDelegate(child: Obx(() {
                               final path = filePath.value;
-                              final hint = path.isNotEmpty
-                                  ? 'Select'
-                                  : 'Click to Select Executable';
+                              final hint = path.isNotEmpty ? 'Select' : 'Click to Select Executable';
                               return Row(
                                 children: [
-                                  Visibility(
-                                      visible: path.isNotEmpty,
-                                      child: Text(path)),
+                                  Visibility(visible: path.isNotEmpty, child: Text(path)),
                                   const SizedBox(
                                     width: 20,
                                   ),
-                                  OutlinedButton(
-                                      onPressed: selectFile, child: Text(hint)),
+                                  OutlinedButton(onPressed: selectFile, child: Text(hint)),
                                 ],
                               );
                             })),
@@ -146,15 +141,24 @@ class _HomePageState extends State<HomePage> {
                       child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      AnimatedList(
-                          reverse: true,
-                          key: globalKey,
-                          itemBuilder: _itemBuilder),
+                      AnimatedList(reverse: true, key: globalKey, itemBuilder: _itemBuilder),
                       Align(
                         alignment: const Alignment(0.9, -0.9),
-                        child: ElevatedButton(
-                          onPressed: _clear,
-                          child: const Text('Clear'),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ElevatedButton(
+                              onPressed: _clear,
+                              child: const Text('Clear'),
+                            ),
+                            const SizedBox(
+                              height: 20,
+                            ),
+                            ElevatedButton(
+                              onPressed: _stop,
+                              child: const Text('Stop '),
+                            )
+                          ],
                         ),
                       )
                     ],

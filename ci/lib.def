@@ -1,3 +1,4 @@
 LIBRARY   ci
 EXPORTS
    ci_init
+   ci_stop

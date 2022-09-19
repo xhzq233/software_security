@@ -3,11 +3,10 @@ import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 import 'package:get/get.dart';
 import 'package:software_security/ffi/u8_ptr_to_str.dart';
-import 'generated_bindings.dart';
+import 'generated_bindings.dart'; //flutter pub run ffigen
 import 'dart:isolate';
 
-final _receivePort = ReceivePort();
-
+final ffilib _lib = _create();
 final RxString ffi_channel_str = RxString('');
 
 final List<String> ffi_channel_str_list = [];
@@ -29,40 +28,61 @@ ffilib _create() {
   return ffilib(ffi.DynamicLibrary.open(libraryPath));
 }
 
-final ffilib _lib = _create();
+Isolate? _iso;
+ReceivePort? _receivePort;
+SendPort? _rSendPort;
+SendPort? _sendPort;
+ReceivePort? _rRcvPort;
 
-void initFFIChannel(String path) {
-  Isolate.spawn(_newIsolate, _iso_send_data_t(_receivePort.sendPort, path));
-  _receivePort.listen((message) {
-    final data = message as _internal_send_data_t;
-    if (data.type == 1) {
-      _streamController.sink.add(LIST_INCREASE);
-      ffi_channel_str_list.add(data.str);
+void initLib(String path) async {
+  _receivePort = ReceivePort();
+  _iso = await Isolate.spawn(_newIsolate, _receivePort!.sendPort);
+  _receivePort!.listen((message) {
+    if (message is SendPort) {
+      _rSendPort = message; //ready
+      _rSendPort!.send(_internal_send_data_t(LIB_START_SIG, path));
     } else {
-      ffi_channel_str.value = data.str;
+      final data = message as _internal_send_data_t;
+      if (data.type == 1) {
+        _streamController.sink.add(LIST_INCREASE);
+        ffi_channel_str_list.add(data.str);
+      } else {
+        ffi_channel_str.value = data.str;
+      }
     }
   });
+
 }
 
-class _iso_send_data_t {
-  const _iso_send_data_t(this.sendPort, this.path);
-
-  final SendPort sendPort;
-
-  final String path;
+void stopLib() {
+  _receivePort?.close();
+  _iso?.kill();
+  // _rSendPort?.send(const _internal_send_data_t(LIB_STOP_SIG, ''));
 }
 
-_iso_send_data_t? _iso_data;
+void _newIsolate(SendPort sendPort) {
+  _sendPort = sendPort;
+  _rRcvPort = ReceivePort();
+  sendPort.send(_rRcvPort!.sendPort);
+  _rRcvPort!.listen(iso_listen);
+}
 
-void _newIsolate(_iso_send_data_t iso_data) {
-  _iso_data = iso_data;
-  ffi.Pointer<send_fn_t> fn = ffi.Pointer.fromFunction(_callback);
-  final data = calloc.allocate<struct_attach_>(ffi.sizeOf<struct_attach_>());
-  data.ref.executable_path = iso_data.path.toNativeUtf8().cast();
-  data.ref.time = DateTime.now().millisecondsSinceEpoch;
-  data.ref.send_fn = fn;
-  _lib.ci_init(data);
-  calloc.free(data);
+void iso_listen(message) async {
+  final msg = message as _internal_send_data_t;
+  if (msg.type == LIB_START_SIG) {
+    ffi.Pointer<send_fn_t> fn = ffi.Pointer.fromFunction(_callback);
+    final data = calloc.allocate<struct_attach_>(ffi.sizeOf<struct_attach_>());
+    data.ref.executable_path = msg.str.toNativeUtf8().cast();
+    data.ref.time = DateTime.now().millisecondsSinceEpoch;
+    data.ref.send_fn = fn;
+    _lib.ci_init(data);
+    calloc.free(data);
+  } else if (msg.type == LIB_STOP_SIG) {
+    final data = calloc.allocate<struct_stop_>(ffi.sizeOf<struct_stop_>());
+    data.ref.code = LIB_STOP_SIG;
+    _lib.ci_stop(data);
+    calloc.free(data);
+  }
 }
 
 class _internal_send_data_t {
@@ -76,6 +96,5 @@ class _internal_send_data_t {
 void _callback(send_data_t data) {
   final ffi.Pointer<ffi.Uint8> codeUnits = data.ref.str.cast();
 
-  _iso_data?.sendPort
-      .send(_internal_send_data_t(data.ref.type, codeUnits.string));
+  _sendPort?.send(_internal_send_data_t(data.ref.type, codeUnits.string));
 }
