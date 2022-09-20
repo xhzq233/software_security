@@ -51,7 +51,6 @@ void initLib(String path) async {
       }
     }
   });
-
 }
 
 void stopLib() {
@@ -76,11 +75,6 @@ void iso_listen(message) async {
     data.ref.time = DateTime.now().millisecondsSinceEpoch;
     data.ref.send_fn = fn;
     _lib.ci_init(data);
-    calloc.free(data);
-  } else if (msg.type == LIB_STOP_SIG) {
-    final data = calloc.allocate<struct_stop_>(ffi.sizeOf<struct_stop_>());
-    data.ref.code = LIB_STOP_SIG;
-    _lib.ci_stop(data);
     calloc.free(data);
   }
 }

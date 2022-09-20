@@ -4,7 +4,8 @@
 
 #include "lib.h"
 
-int exit_flag = 0;
+typedef char * str;
+typedef const str cstr;
 
 #ifdef __APPLE__
 
@@ -36,9 +37,10 @@ void *init(void *pVoid)
 
 #elif defined(_WIN32) || defined(_WIN64)
 #define _CRT_SECURE_NO_WARNINGS
+#undef UNICODE
 #include <windows.h>
+#undef UNICODE
 #define sleep(x) Sleep((x)*1000)
-#define UNICODE
 #include <direct.h>
 #include <cstdio>
 #include <E:\XHZ\Documents\Dev\Detours\include\detours.h>
@@ -49,64 +51,8 @@ void *init(void *pVoid)
 #pragma comment(lib, "detours.lib")
 using namespace std;
 
-void get_err()
-{
-    wchar_t error[100];
-    wsprintf(error, L"%d", GetLastError());
-    MessageBox(NULL, error, L"error", NULL);
-}
-
-// void lpx(const wchar_t *exe_path, const wchar_t *dir_path)
-// {
-//     STARTUPINFO si;
-//     PROCESS_INFORMATION pi;
-//     ZeroMemory(&si, sizeof(STARTUPINFO));
-//     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
-
-//     si.cb = sizeof(STARTUPINFO);
-//     _getcwd(dll_path, MAX_PATH);
-//     strcat(dll_path, "\\DLLmainW.dll");
-
-//     if (DetourCreateProcessWithDllEx(
-//             exe_path,
-//             NULL,
-//             NULL,
-//             NULL,
-//             TRUE,
-//             CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED,
-//             NULL,
-//             dir_path,
-//             &si,
-//             &pi,
-//             dll_path,
-//             NULL))
-//     {
-//         ResumeThread(pi.hThread);
-//         char buf[16];
-//         while (ReadFile(stdout, buf, 16, NULL, NULL))
-//         {
-//             struct struct_send_ data
-//             {
-//                 1, 0, buf
-//             };
-//             attachData->send_fn(&data);
-//             mbstowcs(dir_path, buf, strlen(buf) + 1); //+1是\0
-//             MessageBox(NULL, dir_path, L"ReadFile data", NULL);
-//         }
-//         get_err();
-//         WaitForSingleObject(pi.hProcess, INFINITE);
-//     }
-//     else
-//     {
-//         wchar_t error[100];
-//         wsprintf(error, L"%d", GetLastError());
-//         mbstowcs(dir_path, dll_path, strlen(dll_path) + 1); //+1是\0
-//         MessageBox(NULL, dir_path, error, NULL);
-//     }
-// }
-
-void file_check(const wchar_t *file_path); //检测文件操作异常行为
-void getFolder(char *path);                //获取文件所在文件夹路径
+void file_check(cstr file_path); //检测文件操作异常行为
+void getFolder(cstr path);                //获取文件所在文件夹路径
 
 struct argument
 {
@@ -119,17 +65,14 @@ struct argument
 
 unordered_set<string> folders; //创建容器，保存文件夹名称
 
-// HANDLE hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(argument), L"share");
-// LPVOID lp = MapViewOfFile(hMapFile, FILE_ALL_ACCESS, 0, 0, 0);//创建共享内存(弃用，改用管道传输）
 ci_time_t systemtime_to_time_t(const SYSTEMTIME &st)
 {
     struct tm gm = {st.wSecond, st.wMinute, st.wHour, st.wDay, st.wMonth - 1, st.wYear - 1900, st.wDayOfWeek, 0, 0};
     return mktime(&gm);
 }
 
-int lyf(const wchar_t *file_path, const wchar_t *dir_path, const send_fn_t fn)
-{
-
+void lyf(cstr file_path, cstr dir_path,  cstr dll_path, send_fn_t fn){
+    NULL;
     const int nBufferLen = 2000;
     char szBuffer[nBufferLen] = {0};
     SECURITY_ATTRIBUTES sa;
@@ -149,7 +92,6 @@ int lyf(const wchar_t *file_path, const wchar_t *dir_path, const send_fn_t fn)
     {
         cout << "创建匿名管道失败!" << endl;
         system("pause");
-        return -1;
     }
 
     ZeroMemory(&si, sizeof(STARTUPINFO));
@@ -159,9 +101,6 @@ int lyf(const wchar_t *file_path, const wchar_t *dir_path, const send_fn_t fn)
     si.hStdInput = hRead;
     si.hStdOutput = hWrite;
     si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-    char dll_path[MAX_PATH]; // dll路径
-    _getcwd(dll_path, MAX_PATH);
-    strcat(dll_path, "\\lyf.dll");
 
     char send_buffer[512];
     if (DetourCreateProcessWithDllEx(file_path, NULL, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED, NULL, dir_path, &si, &pi, dll_path, NULL))
@@ -177,7 +116,6 @@ int lyf(const wchar_t *file_path, const wchar_t *dir_path, const send_fn_t fn)
             {
                 cout << "读取数据失败!" << endl;
                 system("pause");
-                return -1;
             }
             memcpy(&arg, szBuffer, sizeof(argument));
             printf("\n\n**********************************\n");
@@ -202,12 +140,10 @@ int lyf(const wchar_t *file_path, const wchar_t *dir_path, const send_fn_t fn)
         char error[100];
         sprintf_s(error, "%d", GetLastError());
     }
-
-    return 0;
 }
 
 //检测文件异常行为
-void file_check(const wchar_t *file_path)
+void file_check(cstr file_path)
 {
     static int NumOfsend = 0; //记录一次CreateFile后send的执行次数
     // CreateFile异常行为
@@ -215,16 +151,14 @@ void file_check(const wchar_t *file_path)
     {
         NumOfsend = 0;
         //获取文件名称
-        LPWSTR file_name = PathFindFileNameW(file_path);
-        int num = WideCharToMultiByte(CP_OEMCP, NULL, file_name, -1, NULL, 0, NULL, FALSE);
-        LPSTR pchar = new char[num];
-        WideCharToMultiByte(CP_OEMCP, NULL, file_name, -1, pchar, num, NULL, FALSE);
+        str file_name = PathFindFileNameA(file_path);
+
         //获取文件夹名称
         char folder[200];
         strcpy_s(folder, arg.value[0]);
         getFolder(folder);
         //是否有自我复制
-        if ((!strcmp(arg.value[1], "80000000") || !strcmp(arg.value[1], "C0000000")) && !strcmp(arg.value[0], pchar))
+        if ((!strcmp(arg.value[1], "80000000") || !strcmp(arg.value[1], "C0000000")) && !strcmp(arg.value[0], file_name))
             printf("可能有自我复制行为\n");
         //是否修改可执行文件
         if (!strcmp(arg.value[1], "40000000") || !strcmp(arg.value[1], "C0000000")) //有写访问权限
@@ -256,11 +190,11 @@ void file_check(const wchar_t *file_path)
 }
 
 //获取文件夹名称
-void getFolder(char *path)
+void getFolder(cstr path)
 {
     if (strstr(path, "\\") != NULL)
     {
-        int length = strlen(path) / sizeof(char);
+        auto length = strlen(path) / sizeof(char);
         while (path[length] != '\\')
             length--;
         memcpy(path + length, path + strlen(path) - 1, length + 1);
@@ -271,28 +205,18 @@ void getFolder(char *path)
     return;
 }
 
-void init(attach_data_t attachData)
-{
-    wchar_t exe_path[MAX_PATH], dir_path[MAX_PATH];
-    char dll_path[MAX_PATH];
-
-    auto len = strlen(attachData->executable_path);
-
-    mbstowcs(exe_path, attachData->executable_path, len + 1); //+1是\0
-
-    _wgetcwd(dir_path, MAX_PATH);
-
-    lyf(exe_path, dir_path, attachData->send_fn);
-}
 #endif
 
 void ci_init(attach_data_t attachData)
 {
-    freopen("out.txt", "w", stdout);
-    init(attachData);
-}
+    freopen("log.txt", "w", stdout);
+    char exe_path[MAX_PATH], dir_path[MAX_PATH],dll_path[MAX_PATH];
 
-void ci_stop(stop_data_t stopCode)
-{
-    exit_flag = stopCode->code;
+    strcpy_s(exe_path,attachData->executable_path);
+    _getcwd(dir_path, MAX_PATH);
+
+    strcpy_s(dll_path,dir_path); 
+    strcat_s(dll_path, "\\lyf.dll");
+
+    lyf(exe_path, dir_path,dll_path, attachData->send_fn);
 }
