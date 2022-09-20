@@ -23,9 +23,9 @@ void *init(void *pVoid)
     attachData->send_fn(&data_);
     while (1)
     {
+        
         if (exit_flag == LIB_STOP_SIG)
             return nullptr;
-        sleep(2);
         auto data = struct_send_{
             .type = 1,
             .time = time(nullptr),
