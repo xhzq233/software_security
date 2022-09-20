@@ -26,6 +26,7 @@ void *init(void *pVoid)
         
         if (exit_flag == LIB_STOP_SIG)
             return nullptr;
+        sleep(2);
         auto data = struct_send_{
             .type = 1,
             .time = time(nullptr),
