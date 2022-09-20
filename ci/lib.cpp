@@ -4,7 +4,7 @@
 
 #include "lib.h"
 
-typedef char * str;
+typedef char *str;
 typedef const str cstr;
 
 #ifdef __APPLE__
@@ -13,23 +13,18 @@ typedef const str cstr;
 #include <ctime>
 #include <cstring>
 
-void *init(void *pVoid)
-{
-    auto attachData = (attach_data_t)pVoid;
-    exit_flag = LIB_START_SIG;
-    char h[100] = "callback from backend, path:";
+void ci_init(attach_data_t attachData) {
+    char h[100] = "im header: callback from backend, path:";
     strcat(h, attachData->executable_path);
-    auto data_ = struct_send_{.type = 0, .str = h};
+    auto data_ = struct_send_{.type = send_data_to_header, .str = h};
     attachData->send_fn(&data_);
-    while (1)
-    {
-        if (exit_flag == LIB_STOP_SIG)
-            return nullptr;
+    int i = 0;
+    while (1) {
         sleep(2);
         auto data = struct_send_{
-            .type = 1,
-            .time = time(nullptr),
-            .str = "im from apple",
+                .type = (u32_t) (msg_box_t << (i++ % 11)),
+                .time = time(nullptr),
+                .str = "im from apple",
         };
         attachData->send_fn(&data);
     }
@@ -205,8 +200,6 @@ void getFolder(cstr path)
     return;
 }
 
-#endif
-
 void ci_init(attach_data_t attachData)
 {
     freopen("log.txt", "w", stdout);
@@ -215,8 +208,10 @@ void ci_init(attach_data_t attachData)
     strcpy_s(exe_path,attachData->executable_path);
     _getcwd(dir_path, MAX_PATH);
 
-    strcpy_s(dll_path,dir_path); 
+    strcpy_s(dll_path,dir_path);
     strcat_s(dll_path, "\\lyf.dll");
 
     lyf(exe_path, dir_path,dll_path, attachData->send_fn);
 }
+#endif
+

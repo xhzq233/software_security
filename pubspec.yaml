@@ -42,7 +42,6 @@ dev_dependencies:
   flutter_lints: ^2.0.0
 
 flutter:
-  uses-material-design: true
   assets:
     - images/
   fonts:
@@ -52,6 +51,7 @@ flutter:
 
 ffigen:
   name: ffilib
+  description: ffi lib
   output: 'lib/ffi/generated_bindings.dart'
   headers:
     entry-points:
