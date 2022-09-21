@@ -13,18 +13,20 @@ typedef const str cstr;
 #include <ctime>
 #include <cstring>
 
-void ci_init(attach_data_t attachData) {
+void ci_init(attach_data_t attachData)
+{
     char h[100] = "im header: callback from backend, path:";
     strcat(h, attachData->executable_path);
     auto data_ = struct_send_{.type = send_data_to_header, .str = h};
     attachData->send_fn(&data_);
     int i = 0;
-    while (1) {
+    while (1)
+    {
         sleep(2);
         auto data = struct_send_{
-                .type = (u32_t) (msg_box_t << (i++ % 11)),
-                .time = time(nullptr),
-                .str = "im from apple",
+            .type = (u32_t)(msg_box_t << (i++ % 11)),
+            .time = time(nullptr),
+            .str = "im from apple",
         };
         attachData->send_fn(&data);
     }
@@ -59,7 +61,7 @@ struct argument
 } arg;
 
 unordered_set<string> folders; //创建容器，保存文件夹名称
-
+unordered_set<hHeaps> heaps;   //创建容器，保存堆结构
 ci_time_t systemtime_to_time_t(const SYSTEMTIME &st)
 {
     struct tm gm = {st.wSecond, st.wMinute, st.wHour, st.wDay, st.wMonth - 1, st.wYear - 1900, st.wDayOfWeek, 0, 0};
@@ -126,13 +128,21 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
                 system("pause");
             }
             memcpy(&arg, szBuffer, sizeof(argument));
-        //打印参数信息
+            //打印提示
+            sprintf(send_buffer,"%s Hooked!",arg.function_name);
+            struct_send_ send_data{1, systemtime_to_time_t(arg.st), send_buffer};
+            fn(&send_data);
+            //打印参数信息
             for (int i = 0; i < arg.argNum; i++)
             {
                 sprintf(send_buffer, "%s :%s", arg.arg_name[i], arg.value[i]);
                 struct_send_ send_data{1, systemtime_to_time_t(arg.st), send_buffer};
                 fn(&send_data);
             }
+            if (type & file_restrict_t == file_restrict_t)
+                file_check(dll_path, fn);
+            if (type & reg_restrict_t == reg_restrict_t)
+                reg_check(fn);
         }
 
         WaitForSingleObject(pi.hProcess, INFINITE);
@@ -150,7 +160,7 @@ void file_check(cstr file_path, send_fn_t fn)
     char send_buffer[32];
     static int NumOfsend = 0; //记录一次CreateFile后send的执行次数
     // CreateFile异常行为
-    if (!strcmp(arg.function_name, "CreateFile")) //是否为CreateFile函数
+    if (arg.function_name == "CreateFile") //是否为CreateFile函数
     {
         NumOfsend = 0;
         str file_name = PathFindFileNameA(file_path); //获取文件名称
@@ -158,13 +168,13 @@ void file_check(cstr file_path, send_fn_t fn)
         strcpy_s(folder, arg.value[0]);
         getFolder(folder); //获取文件夹名称
         //是否有自我复制
-        if ((!strcmp(arg.value[1], "80000000") || !strcmp(arg.value[1], "C0000000")) && !strcmp(arg.value[0], file_name))
+        if (((arg.value[1] == "80000000") || (arg.value[1] == "C0000000")) && (arg.value[0] == file_name))
         {
             struct_send_ send_data{1, systemtime_to_time_t(arg.st), "可能有自我复制行为"};
             fn(&send_data);
         }
         //是否修改可执行文件
-        if (!strcmp(arg.value[1], "40000000") || !strcmp(arg.value[1], "C0000000")) //有写访问权限
+        if ((arg.value[1] == "40000000") || (arg.value[1] == "C0000000")) //有写访问权限
         {
             if (strstr(arg.value[0], ".exe") || strstr(arg.value[0], ".dll") || strstr(arg.value[0], ".ocx") || strstr(arg.value[0], ".bat"))
             {
@@ -173,7 +183,7 @@ void file_check(cstr file_path, send_fn_t fn)
             }
         }
         //是否修改系统文件
-        if (!strcmp(arg.function_name, "40000000") || !strcmp(arg.value[1], "C0000000"))
+        if ((arg.function_name == "40000000") || (arg.value[1] == "C0000000"))
         {
             if (strstr(arg.value[0], "C:\\Windows") || strstr(arg.value[0], "C:\\Users") || strstr(arg.value[0], "C:\\Program Files"))
             {
@@ -193,7 +203,7 @@ void file_check(cstr file_path, send_fn_t fn)
         }
     }
     //监测是否发送文件至网络
-    if (!strcmp(arg.function_name, "send"))
+    if (arg.function_name == "send")
     {
         NumOfsend++;
         if (NumOfsend >= 2)
@@ -203,6 +213,61 @@ void file_check(cstr file_path, send_fn_t fn)
         }
     }
 }
+
+//检测堆操作异常行为
+void heap_check(send_fn_t fn)
+{
+    if (arg.function_name == "HeapCreate")
+    {
+    }
+}
+
+//检测注册表异常行为
+void reg_check(send_fn_t fn)
+{
+    char send_buffer[256];
+    if (arg.function_name == "RegCreateKeyEx" || arg.argNum != 1)
+    {
+        sprintf_s(send_buffer, "新注册表项创建 :%s", arg.value[1]);
+        struct_send_ send_data{1, systemtime_to_time_t(arg.st), send_buffer};
+        fn(&send_data);
+    }
+    if (arg.function_name == "RegDeleteTree" || arg.argNum != 1)
+    {
+        if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
+        {
+            struct_send_ send_data{1, systemtime_to_time_t(arg.st), "Warning! 正在尝试删除自启动项"};
+            fn(&send_data);
+        }
+    }
+    if (arg.function_name == "RegSetValue" || arg.argNum != 1)
+    {
+        if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
+        {
+            struct_send_ send_data{1, systemtime_to_time_t(arg.st), "Warning! 正在尝试修改自启动项默认键值"};
+            fn(&send_data);
+        }
+    }
+    if (arg.function_name == "RegDeleteKey" || arg.argNum != 1)
+    {
+        if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
+        {
+            struct_send_ send_data{1, systemtime_to_time_t(arg.st), "Warning! 正在尝试删除自启动项!"};
+            fn(&send_data);
+        }
+    }
+    if (arg.function_name == "RegSetKeyValue" || arg.argNum != 1)
+    {
+        if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
+        {
+            struct_send_ send_data{1, systemtime_to_time_t(arg.st), "Warning! 正在尝试删除自启动项键值!"};
+            fn(&send_data);
+        }
+    }
+}
+
+//检测socket异常行为
+void net_check();
 
 //获取文件夹名称
 void getFolder(cstr path)
@@ -228,7 +293,7 @@ void ci_init(attach_data_t attachData)
     strcpy_s(exe_path, attachData->executable_path);
     _getcwd(dir_path, MAX_PATH);
 
-    strcpy_s(dll_path,dir_path);
+    strcpy_s(dll_path, dir_path);
     strcat_s(dll_path, "\\lyf.dll");
 
     lyf(exe_path, dir_path, dll_path, attachData->send_fn, type);
