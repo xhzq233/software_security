@@ -175,13 +175,13 @@ void file_check(cstr file_path, send_fn_t fn)
         strcpy_s(folder, arg.value[0]);
         getFolder(folder); //获取文件夹名称
         //是否有自我复制
-        if (((arg.value[1] == "80000000") || (arg.value[1] == "C0000000")) && (arg.value[0] == file_name))
+        if ((!strcmp(arg.value[1], "80000000") || !strcmp(arg.value[1], "C0000000")) && !strcmp(arg.value[0], file_name))
         {
             struct_send_ send_data{1, systemtime_to_time_t(arg.st), "可能有自我复制行为"};
             fn(&send_data);
         }
         //是否修改可执行文件
-        if ((arg.value[1] == "40000000") || (arg.value[1] == "C0000000")) //有写访问权限
+        if (!strcmp(arg.value[1], "40000000") || !strcmp(arg.value[1], "C0000000")) //有写访问权限
         {
             if (strstr(arg.value[0], ".exe") || strstr(arg.value[0], ".dll") || strstr(arg.value[0], ".ocx") || strstr(arg.value[0], ".bat"))
             {
@@ -190,7 +190,7 @@ void file_check(cstr file_path, send_fn_t fn)
             }
         }
         //是否修改系统文件
-        if ((arg.function_name == "40000000") || (arg.value[1] == "C0000000"))
+        if (!strcmp(arg.function_name , "40000000") || !strcmp(arg.value[1] , "C0000000"))
         {
             if (strstr(arg.value[0], "C:\\Windows") || strstr(arg.value[0], "C:\\Users") || strstr(arg.value[0], "C:\\Program Files"))
             {
