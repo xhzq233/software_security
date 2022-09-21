@@ -10,22 +10,17 @@ typedef long long ci_time_t;
 #define LIB_STOP_SIG 13
 
 #define msg_box_t 0b1
-
 #define heap_basic_t 0b1
 #define file_basic_t 0b10
 #define reg_basic_t 0b100
-#define net_basic_t 
-#define mem_copy_basic_t
+#define net_basic_t 0b1000
+#define mem_copy_basic_t 0b10000
 
-#define heap_restrict_t
-
-#define file_restric_t
-
-#define reg_restric_t
-
-#define net_restrict_t
-
-#define mem_copy_restrict_t
+#define heap_restrict_t 0b100000
+#define file_restric_t 0b1000000
+#define reg_restric_t 0b10000000
+#define net_restrict_t 0b100000000
+#define mem_copy_restrict_t 0b1000000000
 
 typedef unsigned int u32_t;
 

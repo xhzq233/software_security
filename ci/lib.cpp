@@ -4,7 +4,7 @@
 
 #include "lib.h"
 
-typedef char * str;
+typedef char *str;
 typedef const str cstr;
 
 #ifdef __APPLE__
@@ -23,7 +23,7 @@ void *init(void *pVoid)
     attachData->send_fn(&data_);
     while (1)
     {
-        
+
         if (exit_flag == LIB_STOP_SIG)
             return nullptr;
         sleep(2);
@@ -44,7 +44,7 @@ void *init(void *pVoid)
 #define sleep(x) Sleep((x)*1000)
 #include <direct.h>
 #include <cstdio>
-#include <E:\XHZ\Documents\Dev\Detours\include\detours.h>
+#include <C:\\软件安全程序设计\\Detours-master\\include\\detours.h>
 #include <iostream>
 #include <unordered_set>
 #include <shlwapi.h>
@@ -52,8 +52,8 @@ void *init(void *pVoid)
 #pragma comment(lib, "detours.lib")
 using namespace std;
 
-void file_check(cstr file_path); //检测文件操作异常行为
-void getFolder(cstr path);                //获取文件所在文件夹路径
+void file_check(cstr file_path, send_fn_t fn); //检测文件操作异常行为
+void getFolder(cstr path);                     //获取文件所在文件夹路径
 
 struct argument
 {
@@ -72,13 +72,15 @@ ci_time_t systemtime_to_time_t(const SYSTEMTIME &st)
     return mktime(&gm);
 }
 
-void lyf(cstr file_path, cstr dir_path,  cstr dll_path, send_fn_t fn){
-    NULL;
+void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
+{
     const int nBufferLen = 2000;
     char szBuffer[nBufferLen] = {0};
     SECURITY_ATTRIBUTES sa;
-    HANDLE hRead = NULL;
-    HANDLE hWrite = NULL;
+    HANDLE hChildRead = NULL;
+    HANDLE hChildWrite = NULL;
+    HANDLE hParentRead = NULL;
+    HANDLE hParentWrite = NULL;
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     DWORD dwReadLen = 0;
@@ -88,10 +90,18 @@ void lyf(cstr file_path, cstr dir_path,  cstr dll_path, send_fn_t fn){
     sa.bInheritHandle = TRUE;
     sa.lpSecurityDescriptor = NULL;
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    bRet = ::CreatePipe(&hRead, &hWrite, &sa, 0);
+    //创建管道，父进程读，子进程写
+    bRet = ::CreatePipe(&hParentRead, &hChildWrite, &sa, 0);
     if (!bRet)
     {
-        cout << "创建匿名管道失败!" << endl;
+        cout << "创建管道失败!" << endl;
+        system("pause");
+    }
+    //创建管道，子进程读，父进程写
+    bRet = ::CreatePipe(&hChildRead, &hParentWrite, &sa, 0);
+    if (!bRet)
+    {
+        cout << "创建管道失败!" << endl;
         system("pause");
     }
 
@@ -99,11 +109,14 @@ void lyf(cstr file_path, cstr dir_path,  cstr dll_path, send_fn_t fn){
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
     si.cb = sizeof(STARTUPINFO);
     si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdInput = hRead;
-    si.hStdOutput = hWrite;
+    si.hStdInput = hChildRead;
+    si.hStdOutput = hChildWrite;
     si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-
     char send_buffer[512];
+
+    //在dll启动之前发送type
+    bRet = ::WriteFile(hParentWrite, &type, sizeof(type), &dwReadLen, NULL);
+    //启动dll
     if (DetourCreateProcessWithDllEx(file_path, NULL, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED, NULL, dir_path, &si, &pi, dll_path, NULL))
     {
 
@@ -111,7 +124,7 @@ void lyf(cstr file_path, cstr dir_path,  cstr dll_path, send_fn_t fn){
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
         //读取管道数据
-        while (bRet = ::ReadFile(hRead, szBuffer, sizeof(argument), &dwReadLen, NULL))
+        while (bRet = ::ReadFile(hParentRead, szBuffer, sizeof(argument), &dwReadLen, NULL))
         {
             if (!bRet)
             {
@@ -119,19 +132,13 @@ void lyf(cstr file_path, cstr dir_path,  cstr dll_path, send_fn_t fn){
                 system("pause");
             }
             memcpy(&arg, szBuffer, sizeof(argument));
-            printf("\n\n**********************************\n");
-            printf("%s Hooked!\n", arg.function_name);
-            printf("DLL日志输出: %d-%d-%d %02d:%02d:%02d:%03d\n", arg.st.wYear, arg.st.wMonth, arg.st.wDay, arg.st.wHour, arg.st.wMinute, arg.st.wSecond, arg.st.wMilliseconds);
-
+        //打印参数信息
             for (int i = 0; i < arg.argNum; i++)
             {
                 sprintf(send_buffer, "%s :%s", arg.arg_name[i], arg.value[i]);
                 struct_send_ send_data{1, systemtime_to_time_t(arg.st), send_buffer};
                 fn(&send_data);
             }
-            file_check(file_path);
-            printf("**********************************\n\n");
-            /*std::cout << "从子进程接收到数据: " << arg.function_name << endl;*/
         }
 
         WaitForSingleObject(pi.hProcess, INFINITE);
@@ -144,34 +151,41 @@ void lyf(cstr file_path, cstr dir_path,  cstr dll_path, send_fn_t fn){
 }
 
 //检测文件异常行为
-void file_check(cstr file_path)
+void file_check(cstr file_path, send_fn_t fn)
 {
+    char send_buffer[32];
     static int NumOfsend = 0; //记录一次CreateFile后send的执行次数
     // CreateFile异常行为
     if (!strcmp(arg.function_name, "CreateFile")) //是否为CreateFile函数
     {
         NumOfsend = 0;
-        //获取文件名称
-        str file_name = PathFindFileNameA(file_path);
-
-        //获取文件夹名称
+        str file_name = PathFindFileNameA(file_path); //获取文件名称
         char folder[200];
         strcpy_s(folder, arg.value[0]);
-        getFolder(folder);
+        getFolder(folder); //获取文件夹名称
         //是否有自我复制
         if ((!strcmp(arg.value[1], "80000000") || !strcmp(arg.value[1], "C0000000")) && !strcmp(arg.value[0], file_name))
-            printf("可能有自我复制行为\n");
+        {
+            struct_send_ send_data{1, systemtime_to_time_t(arg.st), "可能有自我复制行为"};
+            fn(&send_data);
+        }
         //是否修改可执行文件
         if (!strcmp(arg.value[1], "40000000") || !strcmp(arg.value[1], "C0000000")) //有写访问权限
         {
             if (strstr(arg.value[0], ".exe") || strstr(arg.value[0], ".dll") || strstr(arg.value[0], ".ocx") || strstr(arg.value[0], ".bat"))
-                printf("可能有可执行文件被修改\n");
+            {
+                struct_send_ send_data{1, systemtime_to_time_t(arg.st), "可能修改可执行文件"};
+                fn(&send_data);
+            }
         }
         //是否修改系统文件
         if (!strcmp(arg.function_name, "40000000") || !strcmp(arg.value[1], "C0000000"))
         {
             if (strstr(arg.value[0], "C:\\Windows") || strstr(arg.value[0], "C:\\Users") || strstr(arg.value[0], "C:\\Program Files"))
-                printf("可能有系统文件被修改\n");
+            {
+                struct_send_ send_data{1, systemtime_to_time_t(arg.st), "可能修改系统文件"};
+                fn(&send_data);
+            }
         }
         //操作范围是否多个文件夹
         if (folders.find(folder) == folders.end())
@@ -179,14 +193,20 @@ void file_check(cstr file_path)
             folders.emplace(folder);
         }
         if (folders.size() > 1)
-            printf("操作范围有多个文件夹\n");
+        {
+            struct_send_ send_data{1, systemtime_to_time_t(arg.st), "操作范围有多个文件夹"};
+            fn(&send_data);
+        }
     }
     //监测是否发送文件至网络
     if (!strcmp(arg.function_name, "send"))
     {
         NumOfsend++;
         if (NumOfsend >= 2)
-            printf("文件内容可能被发送至网络\n");
+        {
+            struct_send_ send_data{1, systemtime_to_time_t(arg.st), "可能发送文件内容至网络"};
+            fn(&send_data);
+        }
     }
 }
 
@@ -211,13 +231,13 @@ void getFolder(cstr path)
 void ci_init(attach_data_t attachData)
 {
     freopen("log.txt", "w", stdout);
-    char exe_path[MAX_PATH], dir_path[MAX_PATH],dll_path[MAX_PATH];
-
-    strcpy_s(exe_path,attachData->executable_path);
+    char exe_path[MAX_PATH], dir_path[MAX_PATH], dll_path[MAX_PATH];
+    int type = 0b10; //根据按钮传入的type，需修改
+    strcpy_s(exe_path, attachData->executable_path);
     _getcwd(dir_path, MAX_PATH);
 
-    strcpy_s(dll_path,dir_path); 
+    strcpy_s(dll_path, dir_path);
     strcat_s(dll_path, "\\lyf.dll");
 
-    lyf(exe_path, dir_path,dll_path, attachData->send_fn);
+    lyf(exe_path, dir_path, dll_path, attachData->send_fn, type);
 }
