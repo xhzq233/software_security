@@ -41,12 +41,6 @@ typedef struct struct_attach_ {
     const char *executable_path;
 } *attach_data_t;
 
-struct hHeaps
-{
-	HANDLE  heap;
-	int flag;
-};
-
 extern "C" void ci_init(attach_data_t);
 
 #endif //SOFTWARE_SECURITY_MAIN_H

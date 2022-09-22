@@ -61,7 +61,6 @@ struct argument
 } arg;
 
 unordered_set<string> folders; //创建容器，保存文件夹名称
-unordered_set<hHeaps> heaps;   //创建容器，保存堆结构
 ci_time_t systemtime_to_time_t(const SYSTEMTIME &st)
 {
     struct tm gm = {st.wSecond, st.wMinute, st.wHour, st.wDay, st.wMonth - 1, st.wYear - 1900, st.wDayOfWeek, 0, 0};
@@ -129,7 +128,7 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
             }
             memcpy(&arg, szBuffer, sizeof(argument));
             //打印提示
-            sprintf(send_buffer,"%s Hooked!",arg.function_name);
+            sprintf(send_buffer, "%s Hooked!", arg.function_name);
             struct_send_ send_data{1, systemtime_to_time_t(arg.st), send_buffer};
             fn(&send_data);
             //打印参数信息
@@ -143,6 +142,8 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
                 file_check(dll_path, fn);
             if (type & reg_restrict_t == reg_restrict_t)
                 reg_check(fn);
+            if (type & heap_restrict_t == heap_restrict_t)
+                heap_check(fn);
         }
 
         WaitForSingleObject(pi.hProcess, INFINITE);
@@ -217,8 +218,15 @@ void file_check(cstr file_path, send_fn_t fn)
 //检测堆操作异常行为
 void heap_check(send_fn_t fn)
 {
-    if (arg.function_name == "HeapCreate")
+    if (arg.function_name == "HeapDestroy" && arg.arg_name[arg.argNum] == "EEROR")
     {
+        struct_send_ send_data{1, systemtime_to_time_t(arg.st), "EEROR! 重复销毁堆！"};
+        fn(&send_data);
+    }
+    if (arg.function_name == "HeapFree" && arg.arg_name[arg.argNum] == "EEROR")
+    {
+        struct_send_ send_data{1, systemtime_to_time_t(arg.st), "EEROR! 重复释放堆！"};
+        fn(&send_data);
     }
 }
 
@@ -265,9 +273,6 @@ void reg_check(send_fn_t fn)
         }
     }
 }
-
-//检测socket异常行为
-void net_check();
 
 //获取文件夹名称
 void getFolder(cstr path)
