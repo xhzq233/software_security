@@ -181,7 +181,7 @@ void file_check(cstr file_path, send_fn_t fn)
             fn(&send_data);
         }
         //是否修改可执行文件
-        if (!strcmp(arg.value[1], "40000000") || !strcmp(arg.value[1], "C0000000")) //有写访问权限
+        if ((arg.value[1] == "40000000") || (arg.value[1] == "C0000000")) //有写访问权限
         {
             if (strstr(arg.value[0], ".exe") || strstr(arg.value[0], ".dll") || strstr(arg.value[0], ".ocx") || strstr(arg.value[0], ".bat"))
             {
