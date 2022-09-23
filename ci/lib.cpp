@@ -8,6 +8,7 @@ typedef char *str;
 typedef const str cstr;
 
 #include <cstdio>
+void default_send_fn(send_data_t sendData);
 
 void default_send_fn(send_data_t sendData) {
     printf("type=%d str=%s time=%lld", sendData->type, sendData->str, sendData->time);
@@ -19,20 +20,17 @@ void default_send_fn(send_data_t sendData) {
 #include <ctime>
 #include <cstring>
 
-void ci_init(attach_data_t attachData)
-{
-    char h[100] = "im header: callback from backend, path:";
-    strcat(h, attachData->executable_path);
+void ci_init(attach_data_t attachData) {
+    char h[100] = "im header: callback from backend";
     auto data_ = struct_send_{.type = send_data_to_header, .str = h};
     attachData->send_fn(&data_);
     int i = 0;
-    while (1)
-    {
+    while (1) {
         sleep(2);
         auto data = struct_send_{
-            .type = (u32_t)(msg_box_t << (i++ % 11)),
-            .time = time(nullptr),
-            .str = "im from apple",
+                .type = (u32_t) (msg_box_t << (i++ % 11)),
+                .time = time(nullptr),
+                .str = "im from apple",
         };
         attachData->send_fn(&data);
     }
@@ -312,6 +310,6 @@ void ci_init(attach_data_t attachData)
 #endif
 
 int main() {
-    struct_attach_ attach{default_send_fn, 0, 0 , ""};
+    struct_attach_ attach{default_send_fn, 0, 0, ""};
     ci_init(&attach);
 }
