@@ -17,11 +17,7 @@ typedef long long ci_time_t;
 #define reg_basic_t         0b1000
 #define net_basic_t         0b10000
 #define mem_copy_basic_t    0b100000
-#define heap_restrict_t     0b1000000
-#define file_restrict_t     0b10000000
-#define reg_restrict_t      0b100000000
-#define net_restrict_t      0b1000000000
-#define mem_copy_restrict_t 0b10000000000
+#define restrict_t          0b1000000
 
 typedef unsigned int u32_t;
 
@@ -42,5 +38,8 @@ typedef struct struct_attach_ {
 } *attach_data_t;
 
 extern "C" void ci_init(attach_data_t);
+
+void default_send_fn(send_data_t sendData);
+
 
 #endif //SOFTWARE_SECURITY_MAIN_H

@@ -7,6 +7,12 @@
 typedef char *str;
 typedef const str cstr;
 
+#include <cstdio>
+
+void default_send_fn(send_data_t sendData) {
+    printf("type=%d str=%s time=%lld", sendData->type, sendData->str, sendData->time);
+}
+
 #ifdef __APPLE__
 
 #include <unistd.h>
@@ -215,3 +221,7 @@ void ci_init(attach_data_t attachData)
 }
 #endif
 
+int main() {
+    struct_attach_ attach{.send_fn = default_send_fn, .executable_path = ""};
+    ci_init(&attach);
+}
