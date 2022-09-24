@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:software_security/ffi/ffi_channel.dart';
 
 class Constant {
   Constant._();
@@ -81,4 +82,26 @@ class Constant {
     labelMedium: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
     labelSmall: TextStyle(fontFamily: 'JBMono', color: Colors.white, decoration: TextDecoration.none),
   );
+}
+
+extension BackgroundColor on LocalizedSentData {
+
+  static const a = Color(0xff9f369e);
+  static const b = Color(0xff396adb);
+  static const c = Color(0xff373c49);
+
+  Color get hintColor {
+    switch (msgType) {
+      case MsgType.heap:
+        return Color(0xff5c72ff);
+      case MsgType.file:
+        return Color(0xffe71fff);
+      case MsgType.reg:
+        return Color(0xffeac822);
+      case MsgType.net:
+        return Color(0xff9d4cff);
+      case MsgType.memcpy:
+        return Color(0xff2eea86);
+    }
+  }
 }

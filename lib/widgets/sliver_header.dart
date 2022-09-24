@@ -12,7 +12,7 @@ class SliverHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   // height from appBarMaxHeight to appBarMinHeight
   double _computeWidth(double height) {
-    return max(0.64, 0.88 - (appBarMaxHeight - height) / 256);
+    return max(0.7, 0.93 - (appBarMaxHeight - height) / 256);
   }
 
   // height from appBarMaxHeight to appBarMinHeight

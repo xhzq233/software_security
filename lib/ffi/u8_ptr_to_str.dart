@@ -14,3 +14,10 @@ extension U8ToStr on ffi.Pointer<ffi.Uint8> {
     return utf8.decode(asTypedList(length));
   }
 }
+
+extension PcharToStr on ffi.Pointer<ffi.Char> {
+  String get str {
+    final ffi.Pointer<ffi.Uint8> codeUnits = cast();
+    return codeUnits.string;
+  }
+}

@@ -1,29 +1,19 @@
 import 'dart:math';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:software_security/constant.dart';
+import 'package:software_security/ffi/ffi_channel.dart';
+import 'package:software_security/widgets/ext.dart';
 
 typedef DismissDirectionCallback = void Function(DismissDirection direction);
 
-class CapsuleClipper extends CustomClipper<Path> {
-  const CapsuleClipper({Listenable? reclip}) : super(reclip: reclip);
-
-  @override
-  Path getClip(Size size) {
-    final height = size.height;
-    final width = size.width;
-
-    final radius = min(height, width);
-
-    return Path()
-      ..addRRect(RRect.fromRectAndRadius(Rect.fromPoints(Offset.zero, Offset(width, height)), Radius.circular(radius)));
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) {
-    return false;
-  }
-}
+const _dismissBg = ClipPath(
+  clipper: CapsuleClipper(),
+  child: ColoredBox(
+    color: Colors.red,
+  ),
+);
 
 class MonitorRow extends StatelessWidget {
   const MonitorRow({
@@ -32,12 +22,25 @@ class MonitorRow extends StatelessWidget {
     required this.onDismissed,
   });
 
-  final String info;
+  final LocalizedSentData info;
   final DismissDirectionCallback onDismissed;
 
   @override
   Widget build(BuildContext context) {
-    final text = Text(info);
+    List<TextSpan> textSpan = [];
+    textSpan.add(TextSpan(text: info.msgType.name, style: TextStyle(color: info.hintColor, fontWeight: FontWeight.bold)));
+
+    if (info.restrict) {
+      textSpan.add(
+        const TextSpan(text: '*', style: TextStyle(color: Color(0xffff3535))),
+      );
+      textSpan.add(TextSpan(text: info.str, style: const TextStyle(color: Color(0xffff3535))));
+    } else {
+      textSpan.add(TextSpan(text: info.str));
+    }
+
+    final text = Text.rich(TextSpan(children: textSpan));
+
     final bg = FittedBox(
       child: ClipPath(
         clipper: const CapsuleClipper(),
@@ -47,22 +50,32 @@ class MonitorRow extends StatelessWidget {
         ),
       ),
     );
+    final time = DateTime.fromMillisecondsSinceEpoch(info.time);
+    final formatted = '${time.hour}:${time.minute}:${time.second}-${time.millisecond}ms';
+
+    final List<Widget> children = [];
+    children.add(bg);
+    children.add(FractionallySizedBox(
+        heightFactor: 0.6,
+        child: FittedBox(
+          child: Text(
+            formatted,
+            style: const TextStyle(color: Constant.on, fontStyle: FontStyle.italic),
+          ),
+        )));
+
+    final row = Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: children,
+    );
+
     return SizedBox(
         height: 28,
         child: Padding(
           padding: const EdgeInsets.all(4),
           child: ClipPath(
             clipper: const CapsuleClipper(),
-            child: Dismissible(
-                key: key!,
-                onDismissed: onDismissed,
-                background: const ClipPath(
-                  clipper: CapsuleClipper(),
-                  child: ColoredBox(
-                    color: Colors.red,
-                  ),
-                ),
-                child: bg),
+            child: Dismissible(key: key!, onDismissed: onDismissed, background: _dismissBg, child: row),
           ),
         ));
   }

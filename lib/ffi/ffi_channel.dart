@@ -9,7 +9,7 @@ import 'dart:isolate';
 final ffilib _lib = _create();
 final RxString ffi_channel_str = RxString('');
 
-final List<String> ffi_channel_str_list = [];
+final List<LocalizedSentData> ffi_channel_list = [];
 final StreamController<bool> _streamController = StreamController();
 final Stream<bool> ffi_channel_str_list_notification = _streamController.stream;
 
@@ -34,20 +34,20 @@ SendPort? _rSendPort;
 SendPort? _sendPort;
 ReceivePort? _rRcvPort;
 
-void initLib(String path) async {
+void initLib(String path, int config) async {
   _receivePort = ReceivePort();
   _iso = await Isolate.spawn(_newIsolate, _receivePort!.sendPort);
   _receivePort!.listen((message) {
     if (message is SendPort) {
       _rSendPort = message; //ready
-      _rSendPort!.send(_internal_send_data_t(LIB_START_SIG, path));
+      _rSendPort!.send(LocalizedSentData(LIB_START_SIG, 0, path));
     } else {
-      final data = message as _internal_send_data_t;
-      if (data.type == 1) {
-        _streamController.sink.add(LIST_INCREASE);
-        ffi_channel_str_list.add(data.str);
-      } else {
+      final data = message as LocalizedSentData;
+      if (data.type == send_data_to_header) {
         ffi_channel_str.value = data.str;
+      } else {
+        _streamController.sink.add(LIST_INCREASE);
+        ffi_channel_list.add(data);
       }
     }
   });
@@ -55,7 +55,9 @@ void initLib(String path) async {
 
 void stopLib() {
   _receivePort?.close();
-  _iso?.kill();
+  _receivePort = null;
+  _iso?.kill(priority: Isolate.immediate);
+  _iso = null;
   // _rSendPort?.send(const _internal_send_data_t(LIB_STOP_SIG, ''));
 }
 
@@ -67,7 +69,7 @@ void _newIsolate(SendPort sendPort) {
 }
 
 void iso_listen(message) async {
-  final msg = message as _internal_send_data_t;
+  final msg = message as LocalizedSentData;
   if (msg.type == LIB_START_SIG) {
     ffi.Pointer<send_fn_t> fn = ffi.Pointer.fromFunction(_callback);
     final data = calloc.allocate<struct_attach_>(ffi.sizeOf<struct_attach_>());
@@ -79,16 +81,60 @@ void iso_listen(message) async {
   }
 }
 
-class _internal_send_data_t {
-  const _internal_send_data_t(this.type, this.str);
+enum MsgType {
+  heap,
+  file,
+  reg,
+  net,
+  memcpy;
+  String get name {
+    switch (this) {
+
+      case MsgType.heap:
+        return 'heap: ';
+      case MsgType.file:
+        return 'file: ';
+      case MsgType.reg:
+        return 'reg: ';
+      case MsgType.net:
+        return 'net: ';
+      case MsgType.memcpy:
+        return 'memcpy: ';
+    }
+  }
+}
+
+class LocalizedSentData {
+  const LocalizedSentData(this.type, this.time, this.str);
 
   final int type;
 
+  final int time;
+
   final String str;
+
+  MsgType get msgType {
+    if ((type & heap_basic_t) == heap_basic_t) {
+      return MsgType.heap;
+    } else if ((type & file_basic_t) == file_basic_t) {
+      return MsgType.file;
+    } else if ((type & reg_basic_t) == reg_basic_t) {
+      return MsgType.reg;
+    } else if ((type & net_basic_t) == net_basic_t) {
+      return MsgType.net;
+    } else if ((type & memcpy_basic_t) == memcpy_basic_t) {
+      return MsgType.memcpy;
+    }
+    return MsgType.heap;
+  }
+
+  bool get restrict => (type & restrict_t) == restrict_t;
+}
+
+extension LocalizedData on send_data_t {
+  LocalizedSentData get localizedData => LocalizedSentData(ref.type, ref.time, ref.str.str);
 }
 
 void _callback(send_data_t data) {
-  final ffi.Pointer<ffi.Uint8> codeUnits = data.ref.str.cast();
-
-  _sendPort?.send(_internal_send_data_t(data.ref.type, codeUnits.string));
+  _sendPort?.send(data.localizedData);
 }
