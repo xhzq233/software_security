@@ -115,7 +115,7 @@ class _HomePageState extends State<HomePage> {
                 ctx.rebuild();
               })
         ],
-      ).paddingOnly(left: 12, right: 4);
+      ).paddingOnly(left: 11, right: 3.3);
 
   final configs = [
     Pair('File', hookConfig.file),
@@ -187,7 +187,7 @@ class _HomePageState extends State<HomePage> {
                                   ctx.rebuild();
                                 })
                           ],
-                        ).paddingOnly(left: 12, right: 4),
+                        ).paddingOnly(left: 11, right: 3.3),
                       ),
                     ],
                   )).bg().paddingSymmetric(vertical: 16)),
@@ -279,8 +279,16 @@ class _HomePageState extends State<HomePage> {
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Row(
                 children: [
-                  Expanded(flex: 2, child: left),
-                  Expanded(flex: 3, child: right),
+                  Expanded(
+                      flex: 2,
+                      child: RepaintBoundary(
+                        child: left,
+                      )),
+                  Expanded(
+                      flex: 3,
+                      child: RepaintBoundary(
+                        child: right,
+                      )),
                 ],
               ),
             )

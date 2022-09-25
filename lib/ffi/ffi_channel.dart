@@ -87,9 +87,9 @@ enum MsgType {
   reg,
   net,
   memcpy;
+
   String get name {
     switch (this) {
-
       case MsgType.heap:
         return 'heap: ';
       case MsgType.file:
@@ -132,7 +132,8 @@ class LocalizedSentData {
 }
 
 extension LocalizedData on send_data_t {
-  LocalizedSentData get localizedData => LocalizedSentData(ref.type, ref.time, ref.str.str);
+  LocalizedSentData get localizedData =>
+      LocalizedSentData(ref.type, DateTime.now().millisecondsSinceEpoch, ref.str.str);
 }
 
 void _callback(send_data_t data) {
