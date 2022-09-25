@@ -21,17 +21,19 @@ void default_send_fn(send_data_t sendData)
 #include <ctime>
 #include <cstring>
 
-void ci_init(attach_data_t attachData) {
+void ci_init(attach_data_t attachData)
+{
     char h[100] = "im header: callback from backend";
     auto data_ = struct_send_{.type = send_data_to_header, .str = h};
     attachData->send_fn(&data_);
     int i = 0;
-    while (1) {
+    while (1)
+    {
         sleep(2);
         auto data = struct_send_{
-                .type = (u32_t) (msg_box_t << (i++ % 11)),
-                .time = time(nullptr),
-                .str = "im from apple",
+            .type = (u32_t)(msg_box_t << (i++ % 11)),
+            .time = time(nullptr),
+            .str = "im from apple",
         };
         attachData->send_fn(&data);
     }
@@ -45,22 +47,23 @@ void ci_init(attach_data_t attachData) {
 #define sleep(x) Sleep((x)*1000)
 #include <direct.h>
 #include <cstdio>
-#include <E:\\XHZ\\Documents\\Dev\\Detours\\include\\detours.h>
+#include <C:\\软件安全程序设计\\Detours-master\\include\\detours.h>
 #include <iostream>
 #include <unordered_set>
 #include <shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
-#pragma comment(lib, "detours.lib")
+#pragma comment(lib, "C:\\软件安全程序设计\\Detours-master\\lib.X64\\detours.lib")
 using namespace std;
 #define _CRT_SECURE_NO_WARNINGS
 
 void file_check(cstr file_path, send_fn_t fn); //检测文件操作异常行为
 void getFolder(cstr path);                     //获取文件所在文件夹路径
-void reg_check(send_fn_t fn);
-void heap_check(send_fn_t fn);
+void reg_check(send_fn_t fn);                  //注册表异常检测
+void heap_check(send_fn_t fn);                 //堆异常检测
 
 struct argument
 {
+    u32_t type;
     int argNum;                   //参数数量
     SYSTEMTIME st;                //时间
     char function_name[20] = {0}; //函数名称
@@ -111,7 +114,6 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
     si.hStdOutput = hChildWrite;
     si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
     char send_buffer[512];
-
     //在dll启动之前发送type
     bRet = ::WriteFile(hParentWrite, &type, sizeof(type), &dwReadLen, NULL);
     //启动dll
@@ -130,15 +132,14 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
                 system("pause");
             }
             memcpy(&arg, szBuffer, sizeof(argument));
-            //打印提示
             sprintf(send_buffer, "%s Hooked!", arg.function_name);
-            struct_send_ send_data{1, send_buffer};
+            struct_send_ send_data{arg.type, send_buffer};
             fn(&send_data);
             //打印参数信息
             for (int i = 0; i < arg.argNum; i++)
             {
                 sprintf(send_buffer, "%s :%s", arg.arg_name[i], arg.value[i]);
-                struct_send_ send_data{1, send_buffer};
+                struct_send_ send_data{arg.type, send_buffer};
                 fn(&send_data);
             }
             if (type & file_restrict_t)
@@ -173,7 +174,7 @@ void file_check(cstr file_path, send_fn_t fn)
         //是否有自我复制
         if ((!strcmp(arg.value[1], "80000000") || !strcmp(arg.value[1], "C0000000")) && !strcmp(arg.value[0], file_name))
         {
-            struct_send_ send_data{file_basic_t | restrict_t & restrict_t, "可能有自我复制行为"};
+            struct_send_ send_data{file_basic_t | restrict_t & restrict_t, "Warning! 可能有自我复制行为"};
             fn(&send_data);
         }
         //是否修改可执行文件
@@ -181,7 +182,7 @@ void file_check(cstr file_path, send_fn_t fn)
         {
             if (strstr(arg.value[0], ".exe") || strstr(arg.value[0], ".dll") || strstr(arg.value[0], ".ocx") || strstr(arg.value[0], ".bat"))
             {
-                struct_send_ send_data{file_basic_t | restrict_t, "可能修改可执行文件"};
+                struct_send_ send_data{file_basic_t | restrict_t, "Warning! 可能修改可执行文件"};
                 fn(&send_data);
             }
         }
@@ -190,7 +191,7 @@ void file_check(cstr file_path, send_fn_t fn)
         {
             if (strstr(arg.value[0], "C:\\Windows") || strstr(arg.value[0], "C:\\Users") || strstr(arg.value[0], "C:\\Program Files"))
             {
-                struct_send_ send_data{file_basic_t | restrict_t, "可能修改系统文件"};
+                struct_send_ send_data{file_basic_t | restrict_t, "Warning! 可能修改系统文件"};
                 fn(&send_data);
             }
         }
@@ -201,7 +202,7 @@ void file_check(cstr file_path, send_fn_t fn)
         }
         if (folders.size() > 1)
         {
-            struct_send_ send_data{file_basic_t | restrict_t, "操作范围有多个文件夹"};
+            struct_send_ send_data{file_basic_t | restrict_t, "Warning! 操作范围有多个文件夹"};
             fn(&send_data);
         }
     }
@@ -211,7 +212,7 @@ void file_check(cstr file_path, send_fn_t fn)
         NumOfsend++;
         if (NumOfsend >= 2)
         {
-            struct_send_ send_data{file_basic_t | restrict_t, "可能发送文件内容至网络"};
+            struct_send_ send_data{file_basic_t | restrict_t, "Warning! 可能发送文件内容至网络"};
             fn(&send_data);
         }
     }
@@ -296,10 +297,9 @@ void ci_init(attach_data_t attachData)
 {
     freopen("log.txt", "w", stdout);
     char exe_path[MAX_PATH], dir_path[MAX_PATH], dll_path[MAX_PATH];
-    int type = 0b10; //根据按钮传入的type，需修改
+    int type = attachData->type;
     strcpy_s(exe_path, attachData->executable_path);
     _getcwd(dir_path, MAX_PATH);
-
     strcpy_s(dll_path, dir_path);
     strcat_s(dll_path, "\\lyf.dll");
 
@@ -309,6 +309,6 @@ void ci_init(attach_data_t attachData)
 
 int main()
 {
-    struct_attach_ attach{default_send_fn, 0, 0, ""};
+    struct_attach_ attach{default_send_fn, 0, 0b111, "C:\\软件安全程序设计\\软安课设\\x64\\Debug\\test.exe"};
     ci_init(&attach);
 }
