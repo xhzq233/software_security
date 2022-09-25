@@ -41,6 +41,6 @@ typedef struct struct_attach_ {
     const char *executable_path;
 } *attach_data_t;
 
-void ci_init(attach_data_t);
+extern "C" void ci_init(attach_data_t);
 
 #endif //SOFTWARE_SECURITY_MAIN_H

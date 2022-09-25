@@ -19,22 +19,23 @@ void default_send_fn(send_data_t sendData)
 
 #include <unistd.h>
 #include <ctime>
-#include <cstring>
+#include <chrono>
 
 void ci_init(attach_data_t attachData)
 {
     char h[100] = "im header: callback from backend";
     auto data_ = struct_send_{.type = send_data_to_header, .str = h};
     attachData->send_fn(&data_);
-    int i = 0;
-    while (1)
-    {
+    int i = 1;
+    while (1) {
         sleep(2);
+        using namespace std::chrono;
+        milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         auto data = struct_send_{
-            .type = (u32_t)(msg_box_t << (i++ % 11)),
-            .time = time(nullptr),
-            .str = "im from apple",
+                .type = (u32_t) ((msg_box_t << (i % 6)) | (restrict_t << (i % 2))),
+                .str = "im from apple",
         };
+        ++i;
         attachData->send_fn(&data);
     }
 }
