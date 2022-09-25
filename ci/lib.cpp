@@ -77,61 +77,36 @@ unordered_set<string> folders; //创建容器，保存文件夹名称
 void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
 {
     const int nBufferLen = 2000;
-    char szBuffer[nBufferLen] = {0};
-    SECURITY_ATTRIBUTES sa;
-    HANDLE hChildRead = NULL;
-    HANDLE hChildWrite = NULL;
-    HANDLE hParentRead = NULL;
-    HANDLE hParentWrite = NULL;
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-    DWORD dwReadLen = 0;
-    BOOL bRet = FALSE;
+	char  szBuffer[nBufferLen] = { 0 };
+	SECURITY_ATTRIBUTES sa;
+	HANDLE hPipe = NULL;
+	HANDLE hEvent = NULL;
+	DWORD  dwReadLen = 0;
+	DWORD  dwWriteLen = 0;
+	OVERLAPPED ovlap;
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
 
-    //创建匿名管道
-    sa.bInheritHandle = TRUE;
-    sa.lpSecurityDescriptor = NULL;
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    //创建管道，父进程读，子进程写
-    bRet = ::CreatePipe(&hParentRead, &hChildWrite, &sa, 0);
-    if (!bRet)
-    {
-        cout << "创建管道失败!" << endl;
-        system("pause");
-    }
-    //创建管道，子进程读，父进程写
-    bRet = ::CreatePipe(&hChildRead, &hParentWrite, &sa, 0);
-    if (!bRet)
-    {
-        cout << "创建管道失败!" << endl;
-        system("pause");
-    }
+    //创建命名管道
+	hPipe = CreateNamedPipe("\\\\.\\pipe\\Communication", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, 0, 1, 1024, 1024, 0, NULL);
+	hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	ZeroMemory(&ovlap, sizeof(OVERLAPPED));
+	ovlap.hEvent = hEvent;
+	ConnectNamedPipe(hPipe, &ovlap);
 
     ZeroMemory(&si, sizeof(STARTUPINFO));
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
     si.cb = sizeof(STARTUPINFO);
-    si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdInput = hChildRead;
-    si.hStdOutput = hChildWrite;
-    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
     char send_buffer[512];
-    //在dll启动之前发送type
-    bRet = ::WriteFile(hParentWrite, &type, sizeof(type), &dwReadLen, NULL);
-    //启动dll
     if (DetourCreateProcessWithDllEx(file_path, NULL, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED, NULL, dir_path, &si, &pi, dll_path, NULL))
     {
-
         ResumeThread(pi.hThread);
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
+		WaitForSingleObject(hEvent, INFINITE);
+        //传输type
+		WriteFile(hPipe, &type, sizeof(type), &dwReadLen, NULL);
         //读取管道数据
-        while (bRet = ::ReadFile(hParentRead, szBuffer, sizeof(argument), &dwReadLen, NULL))
+        while (ReadFile(hPipe, szBuffer, sizeof(argument), &dwReadLen, NULL))
         {
-            if (!bRet)
-            {
-                cout << "读取数据失败!" << endl;
-                system("pause");
-            }
             memcpy(&arg, szBuffer, sizeof(argument));
             sprintf(send_buffer, "%s Hooked!", arg.function_name);
             struct_send_ send_data{arg.type, send_buffer};
