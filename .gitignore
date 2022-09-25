@@ -49,3 +49,7 @@ pubspec.lock
 **/.vscode
 **/generated*
 **/Generated*
+
+test.bat
+test.txt
+log.txt

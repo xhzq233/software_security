@@ -39,7 +39,7 @@ extension Rebuild on BuildContext {
 }
 
 extension WidgetExtensions on Widget {
-  Widget bg([double radius = 15]) {
+  Widget bg([double radius = 12]) {
     return ClipRRect(
         borderRadius: BorderRadius.all(Radius.circular(radius)),
         child: background(

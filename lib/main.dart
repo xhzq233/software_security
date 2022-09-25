@@ -21,10 +21,6 @@ const _shortDuration = Duration(
   milliseconds: 200,
 );
 
-const _longDuration = Duration(
-  milliseconds: 880,
-);
-
 class SoftwareSecurity extends StatelessWidget {
   const SoftwareSecurity({super.key});
 
@@ -60,7 +56,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _rmItem(int index) {
-    globalKey.currentState!.removeItem(index, (context, animation) => const ColoredBox(color: Colors.red));
+    globalKey.currentState!.removeItem(
+        index,
+        (context, animation) => ScaleTransition(
+              scale: animation,
+              child: const ColoredBox(color: Colors.red),
+            ));
     ffi_channel_list.removeAt(index);
   }
 
@@ -145,55 +146,80 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-  Widget build(BuildContext _) {
-    final dashBoard = FractionallySizedBox(
-      widthFactor: 0.76,
-      child: Column(
-        children: [
-          const Text(
-            'Hook Config',
-            style: TextStyle(fontSize: 24),
-          ),
-          Builder(builder: (ctx) {
-            return _settingRow('Message Box', hookConfig.msgBox, ctx);
-          }).bg().paddingSymmetric(vertical: 16),
-          ...configs.map((e) => Builder(
-              builder: (ctx) => Column(
+  Widget build(BuildContext context) {
+    final dashBoard = Builder(
+        builder: ((ctx) => FractionallySizedBox(
+              widthFactor: 0.76,
+              child: Column(
+                children: [
+                  Row(
                     children: [
-                      _settingRow(e.l, e.r, ctx),
-                      Visibility(
-                        visible: e.r.val != HCClose,
-                        child: const Divider(
-                          height: 1.2,
-                        ),
+                      const Text(
+                        'Hook Config',
+                        style: TextStyle(fontSize: 22),
                       ),
-                      AnimatedCrossFade(
-                        crossFadeState: e.r.val != HCClose ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                        duration: _shortDuration,
-                        layoutBuilder: _defaultLayoutBuilder,
-                        // alignment: e.r.val != HCClose ? Alignment.center : Alignment.topCenter,
-                        secondChild: Row(
-                          mainAxisSize: MainAxisSize.max,
-                        ),
-                        firstChild: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Restrict Check'),
-                            CupertinoSwitch(
-                                value: e.r.val == HCRestrict,
-                                onChanged: (enable) {
-                                  e.r.val = enable ? HCRestrict : HCOpen;
-                                  ctx.rebuild();
-                                })
-                          ],
-                        ).paddingOnly(left: 11, right: 3.3),
-                      ),
+                      const Spacer(),
+                      Checkbox(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                        value: configs.every((e) => e.r.val == HCRestrict),
+                        onChanged: (value) {
+                          if (value == false) {
+                            for (var element in configs) {
+                              element.r.val = HCClose;
+                            }
+                            hookConfig.msgBox.val = HCClose;
+                          } else {
+                            for (var element in configs) {
+                              element.r.val = HCRestrict;
+                            }
+                            hookConfig.msgBox.val = HCOpen;
+                          }
+                          ctx.rebuild();
+                        },
+                      )
                     ],
-                  )).bg().paddingSymmetric(vertical: 16)),
-        ],
-      ),
-    );
+                  ).paddingSymmetric(vertical: 8),
+                  Builder(builder: (ctx) {
+                    return _settingRow('Message Box', hookConfig.msgBox, ctx);
+                  }).bg().paddingSymmetric(vertical: 16),
+                  ...configs.map((e) => Builder(
+                      builder: (ctx) => Column(
+                            children: [
+                              _settingRow(e.l, e.r, ctx),
+                              Visibility(
+                                visible: e.r.val != HCClose,
+                                child: const Divider(
+                                  height: 1.2,
+                                ),
+                              ),
+                              AnimatedCrossFade(
+                                crossFadeState:
+                                    e.r.val != HCClose ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                                duration: _shortDuration,
+                                layoutBuilder: _defaultLayoutBuilder,
+                                // alignment: e.r.val != HCClose ? Alignment.center : Alignment.topCenter,
+                                secondChild: Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                ),
+                                firstChild: Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Restrict Check'),
+                                    CupertinoSwitch(
+                                        value: e.r.val == HCRestrict,
+                                        onChanged: (enable) {
+                                          e.r.val = enable ? HCRestrict : HCOpen;
+                                          ctx.rebuild();
+                                        })
+                                  ],
+                                ).paddingOnly(left: 11, right: 3.3),
+                              ),
+                            ],
+                          )).bg().paddingSymmetric(vertical: 16)),
+                ],
+              ),
+            )));
 
     final left = NestedScrollView(
       body: SingleChildScrollView(
@@ -207,7 +233,7 @@ class _HomePageState extends State<HomePage> {
                 child: dashBoard,
               ),
               crossFadeState: filePath.isNotEmpty ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-              duration: _longDuration),
+              duration: _duration),
         ),
       ),
       headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) => [
@@ -219,8 +245,11 @@ class _HomePageState extends State<HomePage> {
             return Row(
               children: [
                 Visibility(visible: path.isNotEmpty, child: Text(path)),
-                const SizedBox(
-                  width: 20,
+                Visibility(
+                  visible: path.isNotEmpty,
+                  child: const SizedBox(
+                    width: 12,
+                  ),
                 ),
                 OutlinedButton(onPressed: selectFile, child: Text(hint)),
               ],
@@ -255,17 +284,8 @@ class _HomePageState extends State<HomePage> {
         )
       ],
     );
+
     return Scaffold(
-      // backgroundColor: const Color(0x00ffffff),
-      appBar: AppBar(
-        title: Obx(() => AnimatedSwitcher(
-              duration: _duration,
-              child: Text(
-                ffi_channel_str.value,
-                key: UniqueKey(),
-              ),
-            )),
-      ),
       body: SafeArea(
         child: Stack(
           fit: StackFit.expand,

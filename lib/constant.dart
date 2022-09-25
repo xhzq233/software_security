@@ -48,8 +48,8 @@ class Constant {
 第十二枪，抬头！🤯
 百万将士在摇旗，将军韩信战无敌
 第十三枪，我命由我不由天😡""";
-  static const grey = Color.fromRGBO(48, 48, 48, 1);
-  static const on = Color.fromRGBO(200, 200, 200, 1);
+  static const grey = Color.fromARGB(255, 33, 33, 33);
+  static const on = Color.fromARGB(255, 255, 255, 255);
   static const primary = Color.fromRGBO(101, 212, 110, 1);
 
   static const darkScheme = ColorScheme(
@@ -85,23 +85,24 @@ class Constant {
 }
 
 extension BackgroundColor on LocalizedSentData {
-
   static const a = Color(0xff9f369e);
   static const b = Color(0xff396adb);
-  static const c = Color(0xff373c49);
+  static const c = Color.fromARGB(255, 26, 246, 228);
 
   Color get hintColor {
     switch (msgType) {
       case MsgType.heap:
-        return Color(0xff5c72ff);
+        return const Color(0xff5c72ff);
       case MsgType.file:
-        return Color(0xffe71fff);
+        return const Color(0xffe71fff);
       case MsgType.reg:
-        return Color(0xffeac822);
+        return const Color(0xffeac822);
       case MsgType.net:
-        return Color(0xff9d4cff);
+        return const Color(0xff9d4cff);
       case MsgType.memcpy:
-        return Color(0xff2eea86);
+        return const Color(0xff2eea86);
+      case MsgType.msgBox:
+        return c;
     }
   }
 }

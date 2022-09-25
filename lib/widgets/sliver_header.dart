@@ -7,8 +7,8 @@ class SliverHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   final Widget child;
 
-  static const appBarMaxHeight = 96.0;
-  static const appBarMinHeight = 48.0;
+  static const appBarMaxHeight = 128.0;
+  static const appBarMinHeight = 64.0;
 
   // height from appBarMaxHeight to appBarMinHeight
   double _computeWidth(double height) {
@@ -17,7 +17,7 @@ class SliverHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   // height from appBarMaxHeight to appBarMinHeight
   double _computeSigma(double height) {
-    return max(0, (appBarMaxHeight - height) / 4.8);
+    return max(0, (appBarMaxHeight - height) / 8);
   }
 
   @override
@@ -38,7 +38,7 @@ class SliverHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
           FractionallySizedBox(
             widthFactor: _computeWidth(height),
-            heightFactor: 0.9,
+            heightFactor: 0.95,
             child: FittedBox(
               child: child,
             ),

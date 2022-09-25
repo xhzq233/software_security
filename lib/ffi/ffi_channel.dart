@@ -40,7 +40,7 @@ void initLib(String path, int config) async {
   _receivePort!.listen((message) {
     if (message is SendPort) {
       _rSendPort = message; //ready
-      _rSendPort!.send(LocalizedSentData(LIB_START_SIG, 0, path));
+      _rSendPort!.send(LocalizedSentData(config, LIB_START_SIG, path));
     } else {
       final data = message as LocalizedSentData;
       if (data.type == send_data_to_header) {
@@ -70,11 +70,12 @@ void _newIsolate(SendPort sendPort) {
 
 void iso_listen(message) async {
   final msg = message as LocalizedSentData;
-  if (msg.type == LIB_START_SIG) {
+  if (msg.time == LIB_START_SIG) {
     ffi.Pointer<send_fn_t> fn = ffi.Pointer.fromFunction(_callback);
     final data = calloc.allocate<struct_attach_>(ffi.sizeOf<struct_attach_>());
     data.ref.executable_path = msg.str.toNativeUtf8().cast();
     data.ref.time = DateTime.now().millisecondsSinceEpoch;
+    data.ref.type = msg.type;
     data.ref.send_fn = fn;
     _lib.ci_init(data);
     calloc.free(data);
@@ -86,7 +87,8 @@ enum MsgType {
   file,
   reg,
   net,
-  memcpy;
+  memcpy,
+  msgBox;
 
   String get name {
     switch (this) {
@@ -100,6 +102,8 @@ enum MsgType {
         return 'net: ';
       case MsgType.memcpy:
         return 'memcpy: ';
+      case MsgType.msgBox:
+        return 'msgBox: ';
     }
   }
 }
@@ -124,6 +128,8 @@ class LocalizedSentData {
       return MsgType.net;
     } else if ((type & memcpy_basic_t) == memcpy_basic_t) {
       return MsgType.memcpy;
+    } else if ((type & msg_box_t) == msg_box_t) {
+      return MsgType.msgBox;
     }
     return MsgType.heap;
   }
