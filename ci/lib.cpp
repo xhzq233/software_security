@@ -10,8 +10,9 @@ typedef const str cstr;
 #include <cstdio>
 void default_send_fn(send_data_t sendData);
 
-void default_send_fn(send_data_t sendData) {
-    printf("type=%d str=%s time=%lld", sendData->type, sendData->str, sendData->time);
+void default_send_fn(send_data_t sendData)
+{
+    printf("type=%d str=%s\n", sendData->type, sendData->str);
 }
 
 #ifdef __APPLE__
@@ -44,16 +45,19 @@ void ci_init(attach_data_t attachData) {
 #define sleep(x) Sleep((x)*1000)
 #include <direct.h>
 #include <cstdio>
-#include <C:\\软件安全程序设计\\Detours-master\\include\\detours.h>
+#include <E:\\XHZ\\Documents\\Dev\\Detours\\include\\detours.h>
 #include <iostream>
 #include <unordered_set>
 #include <shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "detours.lib")
 using namespace std;
+#define _CRT_SECURE_NO_WARNINGS
 
 void file_check(cstr file_path, send_fn_t fn); //检测文件操作异常行为
 void getFolder(cstr path);                     //获取文件所在文件夹路径
+void reg_check(send_fn_t fn);
+void heap_check(send_fn_t fn);
 
 struct argument
 {
@@ -65,11 +69,6 @@ struct argument
 } arg;
 
 unordered_set<string> folders; //创建容器，保存文件夹名称
-ci_time_t systemtime_to_time_t(const SYSTEMTIME &st)
-{
-    struct tm gm = {st.wSecond, st.wMinute, st.wHour, st.wDay, st.wMonth - 1, st.wYear - 1900, st.wDayOfWeek, 0, 0};
-    return mktime(&gm);
-}
 
 void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
 {
@@ -133,13 +132,13 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
             memcpy(&arg, szBuffer, sizeof(argument));
             //打印提示
             sprintf(send_buffer, "%s Hooked!", arg.function_name);
-            struct_send_ send_data{1, systemtime_to_time_t(arg.st), send_buffer};
+            struct_send_ send_data{1, send_buffer};
             fn(&send_data);
             //打印参数信息
             for (int i = 0; i < arg.argNum; i++)
             {
                 sprintf(send_buffer, "%s :%s", arg.arg_name[i], arg.value[i]);
-                struct_send_ send_data{1, systemtime_to_time_t(arg.st), send_buffer};
+                struct_send_ send_data{1, send_buffer};
                 fn(&send_data);
             }
             if (type & file_restrict_t)
@@ -162,7 +161,6 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
 //检测文件异常行为
 void file_check(cstr file_path, send_fn_t fn)
 {
-    char send_buffer[32];
     static int NumOfsend = 0; //记录一次CreateFile后send的执行次数
     // CreateFile异常行为
     if (arg.function_name == "CreateFile") //是否为CreateFile函数
@@ -175,7 +173,7 @@ void file_check(cstr file_path, send_fn_t fn)
         //是否有自我复制
         if ((!strcmp(arg.value[1], "80000000") || !strcmp(arg.value[1], "C0000000")) && !strcmp(arg.value[0], file_name))
         {
-            struct_send_ send_data{file_basic_t | restrict_t & restrict_t, systemtime_to_time_t(arg.st), "可能有自我复制行为"};
+            struct_send_ send_data{file_basic_t | restrict_t & restrict_t, "可能有自我复制行为"};
             fn(&send_data);
         }
         //是否修改可执行文件
@@ -183,16 +181,16 @@ void file_check(cstr file_path, send_fn_t fn)
         {
             if (strstr(arg.value[0], ".exe") || strstr(arg.value[0], ".dll") || strstr(arg.value[0], ".ocx") || strstr(arg.value[0], ".bat"))
             {
-                struct_send_ send_data{file_basic_t | restrict_t, systemtime_to_time_t(arg.st), "可能修改可执行文件"};
+                struct_send_ send_data{file_basic_t | restrict_t, "可能修改可执行文件"};
                 fn(&send_data);
             }
         }
         //是否修改系统文件
-        if (!strcmp(arg.function_name , "40000000") || !strcmp(arg.value[1] , "C0000000"))
+        if (!strcmp(arg.function_name, "40000000") || !strcmp(arg.value[1], "C0000000"))
         {
             if (strstr(arg.value[0], "C:\\Windows") || strstr(arg.value[0], "C:\\Users") || strstr(arg.value[0], "C:\\Program Files"))
             {
-                struct_send_ send_data{file_basic_t | restrict_t, systemtime_to_time_t(arg.st), "可能修改系统文件"};
+                struct_send_ send_data{file_basic_t | restrict_t, "可能修改系统文件"};
                 fn(&send_data);
             }
         }
@@ -203,7 +201,7 @@ void file_check(cstr file_path, send_fn_t fn)
         }
         if (folders.size() > 1)
         {
-            struct_send_ send_data{file_basic_t | restrict_t, systemtime_to_time_t(arg.st), "操作范围有多个文件夹"};
+            struct_send_ send_data{file_basic_t | restrict_t, "操作范围有多个文件夹"};
             fn(&send_data);
         }
     }
@@ -213,7 +211,7 @@ void file_check(cstr file_path, send_fn_t fn)
         NumOfsend++;
         if (NumOfsend >= 2)
         {
-            struct_send_ send_data{file_basic_t | restrict_t, systemtime_to_time_t(arg.st), "可能发送文件内容至网络"};
+            struct_send_ send_data{file_basic_t | restrict_t, "可能发送文件内容至网络"};
             fn(&send_data);
         }
     }
@@ -224,12 +222,12 @@ void heap_check(send_fn_t fn)
 {
     if (arg.function_name == "HeapDestroy" && arg.arg_name[arg.argNum] == "EEROR")
     {
-        struct_send_ send_data{heap_basic_t | restrict_t, systemtime_to_time_t(arg.st), "EEROR! 重复销毁堆！"};
+        struct_send_ send_data{heap_basic_t | restrict_t, "EEROR! 重复销毁堆！"};
         fn(&send_data);
     }
     if (arg.function_name == "HeapFree" && arg.arg_name[arg.argNum] == "EEROR")
     {
-        struct_send_ send_data{heap_basic_t | restrict_t, systemtime_to_time_t(arg.st), "EEROR! 重复释放堆！"};
+        struct_send_ send_data{heap_basic_t | restrict_t, "EEROR! 重复释放堆！"};
         fn(&send_data);
     }
 }
@@ -241,14 +239,14 @@ void reg_check(send_fn_t fn)
     if (arg.function_name == "RegCreateKeyEx" || arg.argNum != 1)
     {
         sprintf_s(send_buffer, "新注册表项创建 :%s", arg.value[1]);
-        struct_send_ send_data{reg_basic_t | restrict_t, systemtime_to_time_t(arg.st), send_buffer};
+        struct_send_ send_data{reg_basic_t | restrict_t, send_buffer};
         fn(&send_data);
     }
     if (arg.function_name == "RegDeleteTree" || arg.argNum != 1)
     {
         if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
         {
-            struct_send_ send_data{reg_basic_t | restrict_t, systemtime_to_time_t(arg.st), "Warning! 正在尝试删除自启动项"};
+            struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试删除自启动项"};
             fn(&send_data);
         }
     }
@@ -256,7 +254,7 @@ void reg_check(send_fn_t fn)
     {
         if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
         {
-            struct_send_ send_data{reg_basic_t | restrict_t, systemtime_to_time_t(arg.st), "Warning! 正在尝试修改自启动项默认键值"};
+            struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试修改自启动项默认键值"};
             fn(&send_data);
         }
     }
@@ -264,7 +262,7 @@ void reg_check(send_fn_t fn)
     {
         if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
         {
-            struct_send_ send_data{reg_basic_t | restrict_t, systemtime_to_time_t(arg.st), "Warning! 正在尝试删除自启动项!"};
+            struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试删除自启动项!"};
             fn(&send_data);
         }
     }
@@ -272,7 +270,7 @@ void reg_check(send_fn_t fn)
     {
         if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
         {
-            struct_send_ send_data{reg_basic_t | restrict_t, systemtime_to_time_t(arg.st), "Warning! 正在尝试删除自启动项键值!"};
+            struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试删除自启动项键值!"};
             fn(&send_data);
         }
     }
@@ -309,7 +307,8 @@ void ci_init(attach_data_t attachData)
 }
 #endif
 
-int main() {
+int main()
+{
     struct_attach_ attach{default_send_fn, 0, 0, ""};
     ci_init(&attach);
 }

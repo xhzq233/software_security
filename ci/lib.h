@@ -29,7 +29,6 @@ typedef unsigned int u32_t;
 typedef struct struct_send_ {
 #define send_data_to_header 0b0
     const u32_t type;
-    const ci_time_t time;
     const char *str;
 } *send_data_t;
 
