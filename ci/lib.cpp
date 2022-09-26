@@ -12,7 +12,7 @@ void default_send_fn(send_data_t sendData);
 
 void default_send_fn(send_data_t sendData)
 {
-    printf("type=%d str=%s\n", sendData->type, sendData->str);
+    
 }
 
 #ifdef __APPLE__
@@ -140,7 +140,7 @@ void file_check(cstr file_path, send_fn_t fn)
 {
     static int NumOfsend = 0; //记录一次CreateFile后send的执行次数
     // CreateFile异常行为
-    if (arg.function_name == "CreateFile") //是否为CreateFile函数
+    if (!strcmp(arg.function_name , "CreateFile")) //是否为CreateFile函数
     {
         NumOfsend = 0;
         str file_name = PathFindFileNameA(file_path); //获取文件名称
@@ -148,13 +148,13 @@ void file_check(cstr file_path, send_fn_t fn)
         strcpy_s(folder, arg.value[0]);
         getFolder(folder); //获取文件夹名称
         //是否有自我复制
-        if ((!strcmp(arg.value[1], "80000000") || !strcmp(arg.value[1], "C0000000")) && !strcmp(arg.value[0], file_name))
+        if ((!strcmp(arg.value[1], "GENERIC_READ") || !strcmp(arg.value[1], "GENERIC_WRITE_READ")) && !strcmp(arg.value[0], file_name))
         {
             struct_send_ send_data{file_basic_t | restrict_t & restrict_t, "Warning! 可能有自我复制行为"};
             fn(&send_data);
         }
         //是否修改可执行文件
-        if ((arg.value[1] == "40000000") || (arg.value[1] == "C0000000")) //有写访问权限
+        if (!strcmp(arg.value[1] , "GENERIC_WRITE") || !strcmp(arg.value[1] ,"GENERIC_WRITE_READ")) //有写访问权限
         {
             if (strstr(arg.value[0], ".exe") || strstr(arg.value[0], ".dll") || strstr(arg.value[0], ".ocx") || strstr(arg.value[0], ".bat"))
             {
@@ -163,7 +163,7 @@ void file_check(cstr file_path, send_fn_t fn)
             }
         }
         //是否修改系统文件
-        if (!strcmp(arg.function_name, "40000000") || !strcmp(arg.value[1], "C0000000"))
+        if (!strcmp(arg.function_name, "GENERIC_WRITE") || !strcmp(arg.value[1], "GENERIC_WRITE_READ"))
         {
             if (strstr(arg.value[0], "C:\\Windows") || strstr(arg.value[0], "C:\\Users") || strstr(arg.value[0], "C:\\Program Files"))
             {
@@ -183,7 +183,7 @@ void file_check(cstr file_path, send_fn_t fn)
         }
     }
     //监测是否发送文件至网络
-    if (arg.function_name == "send")
+    if (!strcmp(arg.function_name ,"send"))
     {
         NumOfsend++;
         if (NumOfsend >= 2)
@@ -197,14 +197,14 @@ void file_check(cstr file_path, send_fn_t fn)
 //检测堆操作异常行为
 void heap_check(send_fn_t fn)
 {
-    if (arg.function_name == "HeapDestroy" && arg.arg_name[arg.argNum] == "EEROR")
+    if (!strcmp(arg.function_name , "HeapDestroy") && !strcmp(arg.arg_name[arg.argNum] , "ERROR"))
     {
-        struct_send_ send_data{heap_basic_t | restrict_t, "EEROR! 重复销毁堆！"};
+        struct_send_ send_data{heap_basic_t | restrict_t, "ERROR! 重复销毁堆！"};
         fn(&send_data);
     }
-    if (arg.function_name == "HeapFree" && arg.arg_name[arg.argNum] == "EEROR")
+    if (!strcmp(arg.function_name , "HeapFree") && !strcmp(arg.arg_name[arg.argNum] , "ERROR"))
     {
-        struct_send_ send_data{heap_basic_t | restrict_t, "EEROR! 重复释放堆！"};
+        struct_send_ send_data{heap_basic_t | restrict_t, "ERROR! 重复释放堆！"};
         fn(&send_data);
     }
 }
@@ -213,39 +213,39 @@ void heap_check(send_fn_t fn)
 void reg_check(send_fn_t fn)
 {
     char send_buffer[256];
-    if (arg.function_name == "RegCreateKeyEx" || arg.argNum != 1)
+    if (!strcmp(arg.function_name , "RegCreateKeyEx") || arg.argNum != 1)
     {
         sprintf_s(send_buffer, "新注册表项创建 :%s", arg.value[1]);
         struct_send_ send_data{reg_basic_t | restrict_t, send_buffer};
         fn(&send_data);
     }
-    if (arg.function_name == "RegDeleteTree" || arg.argNum != 1)
+    if (!strcmp(arg.function_name , "RegDeleteTree") || arg.argNum != 1)
     {
-        if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
+        if (!strcmp(arg.value[1] , "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
         {
             struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试删除自启动项"};
             fn(&send_data);
         }
     }
-    if (arg.function_name == "RegSetValue" || arg.argNum != 1)
+    if (!strcmp(arg.function_name , "RegSetValue") || arg.argNum != 1)
     {
-        if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
+        if (!strcmp(arg.value[1] , "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
         {
             struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试修改自启动项默认键值"};
             fn(&send_data);
         }
     }
-    if (arg.function_name == "RegDeleteKey" || arg.argNum != 1)
+    if (!strcmp(arg.function_name , "RegDeleteKey") || arg.argNum != 1)
     {
-        if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
+        if (!strcmp(arg.value[1] , "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
         {
             struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试删除自启动项!"};
             fn(&send_data);
         }
     }
-    if (arg.function_name == "RegSetKeyValue" || arg.argNum != 1)
+    if (!strcmp(arg.function_name , "RegSetKeyValue") || arg.argNum != 1)
     {
-        if (arg.value[1] == "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run")
+        if (!strcmp(arg.value[1] , "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
         {
             struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试删除自启动项键值!"};
             fn(&send_data);
@@ -271,7 +271,7 @@ void getFolder(cstr path)
 
 void ci_init(attach_data_t attachData)
 {
-    freopen("log.txt", "w", stdout);
+    // freopen("log.txt", "w", stdout);
     char exe_path[MAX_PATH], dir_path[MAX_PATH], dll_path[MAX_PATH];
     int type = attachData->type;
     strcpy_s(exe_path, attachData->executable_path);
@@ -285,6 +285,6 @@ void ci_init(attach_data_t attachData)
 
 int main()
 {
-    struct_attach_ attach{default_send_fn, 0, 0b111, "C:\\软件安全程序设计\\软安课设\\x64\\Debug\\test.exe"};
+    struct_attach_ attach{default_send_fn, 0, 0b11111111, "C:\\Users\\13058\\dev\\software_security\\ci\\test.exe"};
     ci_init(&attach);
 }
