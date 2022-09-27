@@ -12,7 +12,6 @@ void default_send_fn(send_data_t sendData);
 
 void default_send_fn(send_data_t sendData)
 {
-    
 }
 
 #ifdef __APPLE__
@@ -27,13 +26,14 @@ void ci_init(attach_data_t attachData)
     auto data_ = struct_send_{.type = send_data_to_header, .str = h};
     attachData->send_fn(&data_);
     int i = 1;
-    while (1) {
+    while (1)
+    {
         sleep(2);
         using namespace std::chrono;
         milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         auto data = struct_send_{
-                .type = (u32_t) ((msg_box_t << (i % 6)) | (restrict_t << (i % 2))),
-                .str = "im from apple",
+            .type = (u32_t)((msg_box_t << (i % 6)) | (restrict_t << (i % 2))),
+            .str = "im from apple",
         };
         ++i;
         attachData->send_fn(&data);
@@ -77,22 +77,22 @@ unordered_set<string> folders; //创建容器，保存文件夹名称
 void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
 {
     const int nBufferLen = 2000;
-	char  szBuffer[nBufferLen] = { 0 };
-	SECURITY_ATTRIBUTES sa;
-	HANDLE hPipe = NULL;
-	HANDLE hEvent = NULL;
-	DWORD  dwReadLen = 0;
-	DWORD  dwWriteLen = 0;
-	OVERLAPPED ovlap;
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
+    char szBuffer[nBufferLen] = {0};
+    SECURITY_ATTRIBUTES sa;
+    HANDLE hPipe = NULL;
+    HANDLE hEvent = NULL;
+    DWORD dwReadLen = 0;
+    DWORD dwWriteLen = 0;
+    OVERLAPPED ovlap;
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
 
     //创建命名管道
-	hPipe = CreateNamedPipe("\\\\.\\pipe\\Communication", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, 0, 1, 1024, 1024, 0, NULL);
-	hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	ZeroMemory(&ovlap, sizeof(OVERLAPPED));
-	ovlap.hEvent = hEvent;
-	ConnectNamedPipe(hPipe, &ovlap);
+    hPipe = CreateNamedPipe("\\\\.\\pipe\\Communication", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, 0, 1, 1024, 1024, 0, NULL);
+    hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    ZeroMemory(&ovlap, sizeof(OVERLAPPED));
+    ovlap.hEvent = hEvent;
+    ConnectNamedPipe(hPipe, &ovlap);
 
     ZeroMemory(&si, sizeof(STARTUPINFO));
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
@@ -101,9 +101,9 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
     if (DetourCreateProcessWithDllEx(file_path, NULL, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED, NULL, dir_path, &si, &pi, dll_path, NULL))
     {
         ResumeThread(pi.hThread);
-		WaitForSingleObject(hEvent, INFINITE);
+        WaitForSingleObject(hEvent, INFINITE);
         //传输type
-		WriteFile(hPipe, &type, sizeof(type), &dwReadLen, NULL);
+        WriteFile(hPipe, &type, sizeof(type), &dwReadLen, NULL);
         //读取管道数据
         while (ReadFile(hPipe, szBuffer, sizeof(argument), &dwReadLen, NULL))
         {
@@ -140,7 +140,7 @@ void file_check(cstr file_path, send_fn_t fn)
 {
     static int NumOfsend = 0; //记录一次CreateFile后send的执行次数
     // CreateFile异常行为
-    if (!strcmp(arg.function_name , "CreateFile")) //是否为CreateFile函数
+    if (!strcmp(arg.function_name, "CreateFile")) //是否为CreateFile函数
     {
         NumOfsend = 0;
         str file_name = PathFindFileNameA(file_path); //获取文件名称
@@ -154,7 +154,7 @@ void file_check(cstr file_path, send_fn_t fn)
             fn(&send_data);
         }
         //是否修改可执行文件
-        if (!strcmp(arg.value[1] , "GENERIC_WRITE") || !strcmp(arg.value[1] ,"GENERIC_WRITE_READ")) //有写访问权限
+        if (!strcmp(arg.value[1], "GENERIC_WRITE") || !strcmp(arg.value[1], "GENERIC_WRITE_READ")) //有写访问权限
         {
             if (strstr(arg.value[0], ".exe") || strstr(arg.value[0], ".dll") || strstr(arg.value[0], ".ocx") || strstr(arg.value[0], ".bat"))
             {
@@ -183,7 +183,7 @@ void file_check(cstr file_path, send_fn_t fn)
         }
     }
     //监测是否发送文件至网络
-    if (!strcmp(arg.function_name ,"send"))
+    if (!strcmp(arg.function_name, "send"))
     {
         NumOfsend++;
         if (NumOfsend >= 2)
@@ -197,12 +197,12 @@ void file_check(cstr file_path, send_fn_t fn)
 //检测堆操作异常行为
 void heap_check(send_fn_t fn)
 {
-    if (!strcmp(arg.function_name , "HeapDestroy") && !strcmp(arg.arg_name[arg.argNum] , "ERROR"))
+    if (!strcmp(arg.function_name, "HeapDestroy") && strcmp(arg.arg_name[arg.argNum], "ERROR"))
     {
         struct_send_ send_data{heap_basic_t | restrict_t, "ERROR! 重复销毁堆！"};
         fn(&send_data);
     }
-    if (!strcmp(arg.function_name , "HeapFree") && !strcmp(arg.arg_name[arg.argNum] , "ERROR"))
+    if (!strcmp(arg.function_name, "HeapFree") && strcmp(arg.arg_name[arg.argNum], "ERROR"))
     {
         struct_send_ send_data{heap_basic_t | restrict_t, "ERROR! 重复释放堆！"};
         fn(&send_data);
@@ -213,39 +213,39 @@ void heap_check(send_fn_t fn)
 void reg_check(send_fn_t fn)
 {
     char send_buffer[256];
-    if (!strcmp(arg.function_name , "RegCreateKeyEx") || arg.argNum != 1)
+    if (!strcmp(arg.function_name, "RegCreateKeyEx") && strcmp(arg.value[arg.argNum], "ERROR"))
     {
-        sprintf_s(send_buffer, "新注册表项创建 :%s", arg.value[1]);
+        sprintf_s(send_buffer, "Warning! 新注册表项创建:%s\\%s", arg.value[0],arg.value[1]);
         struct_send_ send_data{reg_basic_t | restrict_t, send_buffer};
         fn(&send_data);
     }
-    if (!strcmp(arg.function_name , "RegDeleteTree") || arg.argNum != 1)
+    if (!strcmp(arg.function_name, "RegDeleteTree") && strcmp(arg.value[arg.argNum], "ERROR"))
     {
-        if (!strcmp(arg.value[1] , "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
+        if (!strcmp(arg.value[1], "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
         {
             struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试删除自启动项"};
             fn(&send_data);
         }
     }
-    if (!strcmp(arg.function_name , "RegSetValue") || arg.argNum != 1)
+    if (!strcmp(arg.function_name, "RegSetValue") && strcmp(arg.value[arg.argNum], "ERROR"))
     {
-        if (!strcmp(arg.value[1] , "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
+        if (!strcmp(arg.value[1], "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
         {
             struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试修改自启动项默认键值"};
             fn(&send_data);
         }
     }
-    if (!strcmp(arg.function_name , "RegDeleteKey") || arg.argNum != 1)
+    if (!strcmp(arg.function_name, "RegDeleteKey") && strcmp(arg.value[arg.argNum], "ERROR"))
     {
-        if (!strcmp(arg.value[1] , "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
+        if (!strcmp(arg.value[1], "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
         {
             struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试删除自启动项!"};
             fn(&send_data);
         }
     }
-    if (!strcmp(arg.function_name , "RegSetKeyValue") || arg.argNum != 1)
+    if (!strcmp(arg.function_name, "RegSetKeyValue") && strcmp(arg.value[arg.argNum], "ERROR"))
     {
-        if (!strcmp(arg.value[1] , "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
+        if (!strcmp(arg.value[1], "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"))
         {
             struct_send_ send_data{reg_basic_t | restrict_t, "Warning! 正在尝试删除自启动项键值!"};
             fn(&send_data);
@@ -285,6 +285,6 @@ void ci_init(attach_data_t attachData)
 
 int main()
 {
-    struct_attach_ attach{default_send_fn, 0, 0b11111111, "C:\\Users\\13058\\dev\\software_security\\ci\\test.exe"};
+    struct_attach_ attach{default_send_fn, 0, 0b11111111111, "C:\\Users\\13058\\dev\\software_security\\ci\\register.exe"};
     ci_init(&attach);
 }
