@@ -12,7 +12,7 @@ void default_send_fn(send_data_t sendData);
 
 void default_send_fn(send_data_t sendData)
 {
-    printf("str:%s\n", sendData->str);
+    printf_s("type=%d str=%s\n", sendData->type, sendData->str);
 }
 
 #ifdef __APPLE__
@@ -49,12 +49,12 @@ void ci_init(attach_data_t attachData)
 #define sleep(x) Sleep((x)*1000)
 #include <direct.h>
 #include <cstdio>
-#include <C:\\软件安全程序设计\\Detours-master\\include\\detours.h>
+#include <E:\\XHZ\\Documents\\Dev\\Detours\\include\\detours.h>
 #include <iostream>
 #include <unordered_set>
 #include <shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
-#pragma comment(lib, "C:\\软件安全程序设计\\Detours-master\\lib.X64\\detours.lib")
+#pragma comment(lib, "E:\\XHZ\\Documents\\Dev\\Detours\\lib.X64\\detours.lib")
 using namespace std;
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -79,21 +79,14 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
 {
     const int nBufferLen = 2000;
     char szBuffer[nBufferLen] = {0};
-    SECURITY_ATTRIBUTES sa;
     HANDLE hPipe = NULL;
-    HANDLE hEvent = NULL;
     DWORD dwReadLen = 0;
     DWORD dwWriteLen = 0;
-    OVERLAPPED ovlap;
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     //创建命名管道
-    hPipe = CreateNamedPipe("\\\\.\\pipe\\Communication", PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, 0, 1, 1024, 1024, 0, NULL);
-    hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    ZeroMemory(&ovlap, sizeof(OVERLAPPED));
-    ovlap.hEvent = hEvent;
-    ConnectNamedPipe(hPipe, &ovlap);
-
+    hPipe = CreateNamedPipe("\\\\.\\pipe\\Communication", PIPE_ACCESS_DUPLEX, PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT, 1, 0, 0, NMPWAIT_WAIT_FOREVER, 0);
+    
     ZeroMemory(&si, sizeof(STARTUPINFO));
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
     si.cb = sizeof(STARTUPINFO);
@@ -101,20 +94,22 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
     if (DetourCreateProcessWithDllEx(file_path, NULL, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED, NULL, dir_path, &si, &pi, dll_path, NULL))
     {
         ResumeThread(pi.hThread);
-        WaitForSingleObject(hEvent, INFINITE);
+        if (ConnectNamedPipe(hPipe, NULL) == NULL) {
+            return;
+        }
         //传输type
         WriteFile(hPipe, &type, sizeof(type), &dwReadLen, NULL);
         //读取管道数据
         while (ReadFile(hPipe, szBuffer, sizeof(argument), &dwReadLen, NULL))
         {
             memcpy(&arg, szBuffer, sizeof(argument));
-            sprintf(send_buffer, "%s Hooked!", arg.function_name);
+            sprintf_s(send_buffer, "%s Hooked!", arg.function_name);
             struct_send_ send_data{arg.type, send_buffer};
             fn(&send_data);
             //打印参数信息
             for (int i = 0; i < arg.argNum; i++)
             {
-                sprintf(send_buffer, "%s :%s", arg.arg_name[i], arg.value[i]);
+                sprintf_s(send_buffer, "%s :%s", arg.arg_name[i], arg.value[i]);
                 struct_send_ send_data{arg.type, send_buffer};
                 fn(&send_data);
             }
@@ -125,6 +120,8 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
             if (type & heap_restrict_t)
                 heap_check(fn);
         }
+        DisconnectNamedPipe(hPipe);
+        CloseHandle(hPipe);
         WaitForSingleObject(pi.hProcess, INFINITE);
     }
     else
@@ -314,6 +311,6 @@ void ci_init(attach_data_t attachData)
 
 int main()
 {
-    struct_attach_ attach{default_send_fn, 0, 0b11111111111, "C:\\Users\\13058\\dev\\software_security\\ci\\test.exe"};
+    struct_attach_ attach{default_send_fn, 0, 0b11111111111, "E:\\XHZ\\Documents\\Dev\\software_security\\test\\test.exe"};
     ci_init(&attach);
 }
