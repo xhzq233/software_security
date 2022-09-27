@@ -138,6 +138,7 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
 void file_check(cstr file_path, send_fn_t fn)
 {
     static int NumOfsend = 0; //记录一次CreateFile后send的执行次数
+    static BOOL flag = TRUE;
     if (!strcmp(arg.function_name, "CopyFile"))
     {
         struct_send_ send_data{file_basic_t | restrict_t & restrict_t, "Warning! 可能有自我复制行为"};
@@ -180,10 +181,11 @@ void file_check(cstr file_path, send_fn_t fn)
         {
             folders.emplace(folder);
         }
-        if (folders.size() > 1)
+        if (folders.size() > 1 && flag)
         {
             struct_send_ send_data{file_basic_t | restrict_t, "Warning! 操作范围有多个文件夹"};
             fn(&send_data);
+            flag = FALSE;
         }
         return;
     }
