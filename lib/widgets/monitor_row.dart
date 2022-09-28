@@ -26,7 +26,7 @@ class MonitorRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     List<TextSpan> textSpan = [];
-    textSpan.add(TextSpan(text: info.msgType.name, style: TextStyle(color: info.hintColor, fontWeight: FontWeight.bold)));
+    textSpan.add(TextSpan(text: info.msgType.label, style: TextStyle(color: info.hintColor, fontWeight: FontWeight.bold)));
 
     if (info.restrict) {
       textSpan.add(

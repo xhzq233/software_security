@@ -5,9 +5,11 @@ import 'package:get/get.dart';
 import 'package:software_security/constant.dart';
 import 'package:software_security/ffi/ffi_channel.dart';
 import 'package:software_security/file_select.dart';
+import 'package:software_security/widgets/charts.dart';
 import 'package:software_security/widgets/ext.dart';
 import 'package:software_security/widgets/monitor_row.dart';
 import 'package:software_security/widgets/sliver_header.dart';
+import 'package:charts_flutter/flutter.dart' as charts;
 
 void main() {
   runApp(const SoftwareSecurity());
@@ -45,12 +47,15 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final globalKey = GlobalKey<AnimatedListState>();
 
+  final RxBool _chartsRefresher = RxBool(false);
+
   @override
   void initState() {
     ffi_channel_str_list_notification.listen((l) {
       if (l == LIST_INCREASE) {
         globalKey.currentState!.insertItem(0, duration: _duration);
       } else {}
+      _chartsRefresher.toggle();
     });
     super.initState();
   }
@@ -63,6 +68,7 @@ class _HomePageState extends State<HomePage> {
               child: const ColoredBox(color: Colors.red),
             ));
     ffi_channel_list.removeAt(index);
+    channelStreamController.add(LIST_DECREASE);
   }
 
   void _clear() {
@@ -225,9 +231,32 @@ class _HomePageState extends State<HomePage> {
       body: SingleChildScrollView(
         child: Obx(
           () => AnimatedCrossFade(
-              firstChild: const Text(
-                Constant.meme,
-                textAlign: TextAlign.center,
+              firstChild: SizedBox(
+                height: 377,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      const ColoredBox(color: Colors.white70),
+                      ObxValue<RxBool>((obx) {
+                        final _ = obx.value;
+                        return DeveloperChart(
+                          series: [
+                            charts.Series(
+                                id: "Counts",
+                                displayName: 'Counts',
+                                data: MsgType.values,
+                                domainFn: (MsgType type, _) => type.name,
+                                measureFn: (MsgType type, _) =>
+                                    ffi_channel_list.where((element) => element.msgType == type).length,
+                                colorFn: (MsgType type, _) => charts.ColorUtil.fromDartColor(type.hintColor))
+                          ],
+                        );
+                      }, _chartsRefresher).paddingAll(8)
+                    ],
+                  ),
+                ).paddingSymmetric(horizontal: 10),
               ),
               secondChild: Center(
                 child: dashBoard,
