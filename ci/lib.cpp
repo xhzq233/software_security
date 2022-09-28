@@ -55,6 +55,7 @@ void ci_init(attach_data_t attachData)
 #include <shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "C:\\软件安全程序设计\\Detours-master\\lib.X64\\detours.lib")
+#pragma comment(lib,"User32.lib")
 using namespace std;
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -67,7 +68,6 @@ struct argument
 {
     u32_t type;
     int argNum;                   //参数数量
-    SYSTEMTIME st;                //时间
     char function_name[20] = {0}; //函数名称
     char arg_name[10][30] = {0};  //参数名称
     char value[10][150] = {0};    //参数内容
@@ -91,14 +91,14 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
     si.cb = sizeof(STARTUPINFO);
     char send_buffer[512];
-    if (DetourCreateProcessWithDllEx(file_path, NULL, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED, NULL, dir_path, &si, &pi, dll_path, NULL))
+    if (DetourCreateProcessWithDllEx(file_path, NULL, NULL, NULL, FALSE, CREATE_NEW_PROCESS_GROUP , NULL, dir_path, &si, &pi, dll_path, NULL))
     {
-        ResumeThread(pi.hThread);
         if (ConnectNamedPipe(hPipe, NULL) == NULL) {
             return;
         }
         //传输type
         WriteFile(hPipe, &type, sizeof(type), &dwReadLen, NULL);
+
         //读取管道数据
         while (ReadFile(hPipe, szBuffer, sizeof(argument), &dwReadLen, NULL))
         {
@@ -114,15 +114,16 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
                 fn(&send_data);
             }
             if (type & file_restrict_t)
-                file_check(dll_path, fn);
+                file_check(file_path, fn);
             if (type & reg_restrict_t)
                 reg_check(fn);
             if (type & heap_restrict_t)
                 heap_check(fn);
         }
+        int error=GetLastError();
+        
         DisconnectNamedPipe(hPipe);
         CloseHandle(hPipe);
-        WaitForSingleObject(pi.hProcess, INFINITE);
     }
     else
     {
@@ -134,11 +135,12 @@ void lyf(cstr file_path, cstr dir_path, cstr dll_path, send_fn_t fn, u32_t type)
 //检测文件异常行为
 void file_check(cstr file_path, send_fn_t fn)
 {
+    if(!(arg.type & file_basic_t))return;
     static int NumOfsend = 0; //记录一次CreateFile后send的执行次数
     static BOOL flag = TRUE;
     if (!strcmp(arg.function_name, "CopyFile"))
     {
-        struct_send_ send_data{file_basic_t | restrict_t & restrict_t, "Warning! 可能有自我复制行为"};
+        struct_send_ send_data{file_basic_t | restrict_t, "Warning! 可能有自我复制行为"};
         fn(&send_data);
         return;
     }
@@ -152,7 +154,7 @@ void file_check(cstr file_path, send_fn_t fn)
         //是否有自我复制
         if ((!strcmp(arg.value[1], "GENERIC_READ") || !strcmp(arg.value[1], "GENERIC_WRITE_READ")) && !strcmp(arg.value[0], file_name))
         {
-            struct_send_ send_data{file_basic_t | restrict_t & restrict_t, "Warning! 可能有自我复制行为"};
+            struct_send_ send_data{file_basic_t | restrict_t , "Warning! 可能有自我复制行为"};
             fn(&send_data);
         }
         //是否修改可执行文件
@@ -201,6 +203,7 @@ void file_check(cstr file_path, send_fn_t fn)
 //检测堆操作异常行为
 void heap_check(send_fn_t fn)
 {
+    if(!(arg.type & heap_basic_t))return;
     if (!strcmp(arg.function_name, "HeapDestroy") && strcmp(arg.arg_name[arg.argNum], "ERROR"))
     {
         struct_send_ send_data{heap_basic_t | restrict_t, "ERROR! 重复销毁堆！"};
@@ -217,6 +220,7 @@ void heap_check(send_fn_t fn)
 //检测注册表异常行为
 void reg_check(send_fn_t fn)
 {
+    if(!(arg.type & reg_basic_t))return;
     char send_buffer[256];
     if (!strcmp(arg.arg_name[arg.argNum], "ERROR"))
     {
@@ -311,6 +315,6 @@ void ci_init(attach_data_t attachData)
 
 int main()
 {
-    struct_attach_ attach{default_send_fn, 0, 0b11111111111, "C:\\Users\\13058\\dev\\software_security\\ci\\test.exe"};
+    struct_attach_ attach{default_send_fn, 0, 0b11111111111, "C:\\Users\\13058\\dev\\software_security\\ci\\copyfile.exe"};
     ci_init(&attach);
 }
