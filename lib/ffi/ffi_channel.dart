@@ -10,8 +10,8 @@ final ffilib _lib = _create();
 final RxString ffi_channel_str = RxString('');
 
 final List<LocalizedSentData> ffi_channel_list = [];
-final StreamController<bool> _streamController = StreamController();
-final Stream<bool> ffi_channel_str_list_notification = _streamController.stream;
+final StreamController<bool> channelStreamController = StreamController();
+final Stream<bool> ffi_channel_str_list_notification = channelStreamController.stream;
 
 const LIST_INCREASE = true;
 const LIST_DECREASE = false;
@@ -46,8 +46,8 @@ void initLib(String path, int config) async {
       if (data.type == send_data_to_header) {
         ffi_channel_str.value = data.str;
       } else {
-        _streamController.sink.add(LIST_INCREASE);
         ffi_channel_list.add(data);
+        channelStreamController.sink.add(LIST_INCREASE);
       }
     }
   });
@@ -90,7 +90,7 @@ enum MsgType {
   memcpy,
   msgBox;
 
-  String get name {
+  String get label {
     switch (this) {
       case MsgType.heap:
         return 'heap: ';
