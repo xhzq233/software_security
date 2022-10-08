@@ -78,7 +78,7 @@ void iso_listen(message) async {
     data.ref.type = msg.type;
     data.ref.send_fn = fn;
     _lib.ci_init(data);
-    calloc.free(data);
+    // calloc.free(data);
   }
 }
 
