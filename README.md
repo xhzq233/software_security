@@ -1,5 +1,3 @@
-[toc]
-
 # software_security
 
 HUST Software Security Curriculum Design
@@ -78,7 +76,7 @@ DLL 架构：PE32+ executable (DLL) (console) x86-64, for MS Windows
 
 总体结构如图所示：
 
-![Screenshot 2022-10-08 at 14.39.17](/Users/xhz/Library/Application Support/typora-user-images/Screenshot 2022-10-08 at 14.39.17.png)
+![Screenshot 2022-10-08 at 14.39.17](https://github.com/xhzq233/images/blob/master/2022-10-09/Screenshot%202022-10-08%20at%2014.39.17.png?raw=true)
 
 ### 2.2 UI设计
 
@@ -93,13 +91,13 @@ DLL 架构：PE32+ executable (DLL) (console) x86-64, for MS Windows
 5. Memory Copy此时会对内存相关的WINAPI进行截获并打印参数到UI上
 6. Register 此时会对注册表相关的WINAPI（比如RegOpenKey）进行截获并打印参数到UI上
 
-![2B87183B3F10E4BF2CA48702DF48D111](images/2B87183B3F10E4BF2CA48702DF48D111.png)
+![2B87183B3F10E4BF2CA48702DF48D111](https://github.com/xhzq233/images/blob/master/2022-10-09/2B87183B3F10E4BF2CA48702DF48D111.png?raw=true)
 
-![CA751AF0AA3AF3E918F97179B23E756A](/Users/xhz/Library/Containers/com.tencent.qq/Data/Library/Caches/Images/CA751AF0AA3AF3E918F97179B23E756A.png)
+![CA751AF0AA3AF3E918F97179B23E756A](https://github.com/xhzq233/images/blob/master/2022-10-09/CA751AF0AA3AF3E918F97179B23E756A.png?raw=true)
 
 选择完executable后会立即进入注入-运行阶段，开始监听特定WINAPI函数的调用，右侧变为输出参数面板，左侧变为动画图表来统计当前已输出的数据的各个种类的分布，clear按钮可以清空输出，stop按钮可以停止hook回到初始页面
 
-![FF01249790481CF174E8522290E56E50](/Users/xhz/Library/Containers/com.tencent.qq/Data/Library/Caches/Images/FF01249790481CF174E8522290E56E50.png)
+![FF01249790481CF174E8522290E56E50](https://github.com/xhzq233/images/blob/master/2022-10-09/FF01249790481CF174E8522290E56E50.png?raw=true)
 
 ### 2.3 DLL设计
 
@@ -107,13 +105,13 @@ DLL 架构：PE32+ executable (DLL) (console) x86-64, for MS Windows
 
 ​	在拦截函数之后，可以获取到函数的参数内容，同时考虑到参数类型的不同会做一定处理后发送至注射器程序进行分析。dll程序整体设计思路如下图所示
 
-<img src="/Users/xhz/Library/Application Support/typora-user-images/Screenshot 2022-10-08 at 15.57.17.png" alt="Screenshot 2022-10-08 at 15.57.17" style="zoom:67%;" />
+<img src="https://github.com/xhzq233/images/blob/master/2022-10-09/Screenshot%202022-10-08%20at%2015.57.17.png?raw=true" alt="Screenshot 2022-10-08 at 15.57.17" style="zoom:67%;" />
 
 ### 2.4 后端(注射器)设计
 
 ​	后端主要负责启动dll注入目标程序同时启动目标程序，并在dll启动后接收dll发送过来的参数信息进行恶意行为分析，并将数据汇总发送至UI程序。设计思路如下图所示
 
-![Screenshot 2022-10-08 at 16.03.36](/Users/xhz/Library/Application Support/typora-user-images/Screenshot 2022-10-08 at 16.03.36.png)
+![Screenshot 2022-10-08 at 16.03.36](https://github.com/xhzq233/images/blob/master/2022-10-09/Screenshot%202022-10-08%20at%2016.03.36.png?raw=true)
 
 ## 3 系统实现
 
@@ -123,7 +121,7 @@ DLL 架构：PE32+ executable (DLL) (console) x86-64, for MS Windows
 
 ci是后端和dll源代码位置，lib下是UI源代码位置，test下是测试executable位置，其他是各个平台与Flutter的Native链接
 
-![Screenshot 2022-10-08 at 16.12.09](/Users/xhz/Library/Application Support/typora-user-images/Screenshot 2022-10-08 at 16.12.09.png)
+![Screenshot 2022-10-08 at 16.12.09](https://github.com/xhzq233/images/blob/master/2022-10-09/Screenshot%202022-10-08%20at%2016.12.09.png?raw=true)
 
 ### 3.1 UI实现
 
